@@ -16,6 +16,14 @@ PREFIX = 'rhwp-lab:v2:'
 WRANGLER = pathlib.Path(__file__).resolve().parents[1] / 'node_modules/.bin/wrangler'
 
 
+def served_path(name):
+    if name == 'index.html':
+        return ''
+    if name.endswith('/index.html'):
+        return name[:-10]
+    return name[:-5] if name.endswith('.html') else name
+
+
 def meta(deployment):
     message = deployment.get('deployment_trigger', {}).get('metadata', {}).get('commit_message', '')
     if not message.startswith(PREFIX):
@@ -123,7 +131,7 @@ class Pages:
                 for name, data in files.items():
                     if name == '_headers':
                         continue  # Pages consumes this configuration instead of serving it.
-                    actual, mime = self.read(url + '/' + ('' if name == 'index.html' else name))
+                    actual, mime = self.read(url + '/' + served_path(name))
                     if actual != data:
                         raise ValueError('static bytes mismatch: ' + name)
                     if name.endswith('.wasm') and mime != 'application/wasm':

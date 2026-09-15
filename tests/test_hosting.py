@@ -1,6 +1,6 @@
 import pathlib,sys,unittest
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]/'lab'))
-from hosting import PREFIX, latest_pointers, retained_ids, Pages
+from hosting import PREFIX, latest_pointers, retained_ids, Pages, served_path
 import json
 
 
@@ -43,3 +43,10 @@ class Hosting(unittest.TestCase):
         self.assertIn(('/deployments/1?force=true','DELETE'),calls)
 
 if __name__=='__main__':unittest.main()
+
+class CanonicalHtml(unittest.TestCase):
+    def test_pages_canonical_html_routes(self):
+        self.assertEqual(served_path('print.html'),'print')
+        self.assertEqual(served_path('index.html'),'')
+        self.assertEqual(served_path('docs/index.html'),'docs/')
+        self.assertEqual(served_path('assets/core.wasm'),'assets/core.wasm')

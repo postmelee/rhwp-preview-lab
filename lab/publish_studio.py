@@ -8,7 +8,7 @@ from publish import api,pages,ROOT
 hosting.PREFIX = 'rhwp-studio-probe:v1:'
 number=int(os.environ['PREVIEW_PR'])
 sha=os.environ['SOURCE_SHA']
-run=os.environ['GITHUB_RUN_ID']; attempt=os.environ['GITHUB_RUN_ATTEMPT']
+run=os.environ.get('SOURCE_ARTIFACT_RUN',os.environ['GITHUB_RUN_ID']); attempt=os.environ.get('SOURCE_ARTIFACT_ATTEMPT',os.environ['GITHUB_RUN_ATTEMPT'])
 
 def guard():
     raw=subprocess.check_output(['node','scripts/preview/gate.cjs','edwardkim/rhwp',str(number)],text=True)
