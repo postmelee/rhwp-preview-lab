@@ -30,7 +30,7 @@
 
 ## 남은 검증 경계
 
-fork 성공은 내부 PR 성공과 다르다. 별도 작성자 계정의 정상 fork PR과 maintainer 승인 경로가 아직 필요하다. rhwp 전체 gate 이식, 실제 Studio 저장·재열기 및 운영 main 활성화는 별도 단계다. 동일 PR이 종료되어 배포가 정리된 뒤 reopen하면 새 미리보기 수명으로 baseline을 다시 고정한다.
+별도 작성자 계정의 fork PR과 maintainer 승인 경로를 실검증했다. 자세한 완료·미검증 범위는 [fork 실검증 보고서](FORK_VALIDATION.md)를 따른다. rhwp 전체 gate 이식, 실제 Studio 저장·재열기 및 운영 main 활성화는 별도 단계다. 동일 PR이 종료되어 배포가 정리된 뒤 reopen하면 새 미리보기 수명으로 baseline을 다시 고정한다.
 
 공식 근거: [Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/), [CI 연동](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/), [삭제 API](https://developers.cloudflare.com/api/resources/pages/subresources/projects/subresources/deployments/methods/delete/).
 
@@ -43,4 +43,4 @@ actor와 재실행 triggering_actor 모두 현재 write/maintain/admin 권한이
 
 승인 없는 fork는 성공 CI 확인 후 게시 대기로 표시하고 기존 정상 고유 링크를 유지한다. 내부 PR/devel은 자동 게시한다. fork 고정 주소는 자동 이동 대신 외부 코드/민감 문서 주의 안내와 열기 링크를 표시한다. 이는 게시 통제이며 악성 코드 판정이나 외부 통신 차단 기능이 아니다.
 
-실제 별도 작성자 fork 시험은 아직 미완료다. SHA 변경·권한 회수·다른 PR/저장소·승인 누락은 로컬 계약 테스트로 확인했다.
+별도 계정의 실제 fork PR로 CI 승인, 게시 승인, 새 head 재승인, 이전 배포 폐기, 실패 CI 차단을 검증했다. [fork 실검증 보고서](FORK_VALIDATION.md)를 따른다. fork 작성자의 force-push, 실제 권한 회수와 비권한 rerun은 아직 실검증하지 않았으며 관련 계약 테스트와 내부 PR 시험을 구분한다.

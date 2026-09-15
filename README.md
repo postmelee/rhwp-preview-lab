@@ -26,7 +26,7 @@ actionlint
 
 PR 실행은 contents:read이며 credential을 checkout에 남기지 않는다. publisher에는 contents:read/actions:read/pull-requests:write만 있다. 대기 concurrency 이벤트가 합쳐져도 요청을 놓치지 않도록 매번 열린 PR 전부와 devel을 재조정한다. 이 방식은 소규모 시험용이며 운영 규모에서는 요청별 큐 설계가 필요하다. publisher는 PR 코드·artifact를 실행하지 않고 ZIP 경로·용량·정적 파일 목록을 검사한다. CI 및 Quality workflow가 기본 브랜치와 달라진 PR은 게시를 차단한다.
 
-정적 앱은 신뢰하지 않는 코드다. 실제 호스팅 시 운영 앱과 분리된 origin을 사용해야 한다. 최신 head 재조회와 코멘트 갱신 사이에는 GitHub 원자적 조건부 쓰기가 없으므로 표시 SHA를 명시하고 후속 이벤트로 조정한다. Cloudflare 별칭 갱신·배포 삭제·baseline 보존을 실제 검증했다. fork 권한, rhwp 운영 gate 이식, API 쓰기 도중 head 변경의 모든 순열은 아직 검증 완료 범위가 아니다.
+정적 앱은 신뢰하지 않는 코드다. 실제 호스팅 시 운영 앱과 분리된 origin을 사용해야 한다. 최신 head 재조회와 코멘트 갱신 사이에는 GitHub 원자적 조건부 쓰기가 없으므로 표시 SHA를 명시하고 후속 이벤트로 조정한다. Cloudflare 별칭 갱신·배포 삭제·baseline 보존을 실제 검증했다. 실제 fork 승인 여정은 아래 보고서에 기록했다. rhwp 운영 gate 이식과 API 쓰기 도중 head 변경의 모든 순열은 아직 검증 완료 범위가 아니다.
 
 ## 복구
 
@@ -53,4 +53,4 @@ actor와 재실행 triggering_actor 모두 현재 write/maintain/admin 권한이
 
 승인 없는 fork는 성공 CI 확인 후 게시 대기로 표시하고 기존 정상 고유 링크를 유지한다. 내부 PR/devel은 자동 게시한다. fork 고정 주소는 자동 이동 대신 외부 코드/민감 문서 주의 안내와 열기 링크를 표시한다. 이는 게시 통제이며 악성 코드 판정이나 외부 통신 차단 기능이 아니다.
 
-실제 별도 작성자 fork 시험은 아직 미완료다. SHA 변경·권한 회수·다른 PR/저장소·승인 누락은 로컬 계약 테스트로 확인했다.
+별도 계정의 실제 fork PR로 CI 승인, 게시 승인, 새 head 재승인, 이전 배포 폐기, 실패 CI 차단을 검증했다. [fork 실검증 보고서](FORK_VALIDATION.md)를 따른다. fork 작성자의 force-push, 실제 권한 회수와 비권한 rerun은 아직 실검증하지 않았으며 관련 계약 테스트와 내부 PR 시험을 구분한다.
