@@ -92,9 +92,9 @@ class Pages:
     def deployments(self):
         items = []
         for page in range(1, 11):
-            batch = self.api(f'/deployments?per_page=100&page={page}')
+            batch = self.api(f'/deployments?per_page=20&page={page}')
             items.extend(batch)
-            if len(batch) < 100:
+            if len(batch) < 20:
                 return items
         raise ValueError('Pages pagination overflow')
 
