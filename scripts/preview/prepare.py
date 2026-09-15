@@ -23,8 +23,15 @@ def prepare(source, sha):
         raise ValueError('preview public directory already exists')
     public.mkdir()
     for entry in (studio / 'public').iterdir():
-        if entry.name == 'samples' or entry.is_symlink():
+        if entry.name == 'samples':
             continue
+        if entry.is_symlink():
+            # This repository intentionally exposes its distributable font assets
+            # through public/fonts. Never follow arbitrary checkout symlinks.
+            target = entry.resolve()
+            if entry.name != 'fonts' or target != (source/'assets/fonts').resolve() or not target.is_relative_to(source):
+                continue
+            entry = target
         if entry.is_dir():
             shutil.copytree(entry, public / entry.name, ignore=lambda path, names: [n for n in names if (pathlib.Path(path)/n).is_symlink()])
         else:

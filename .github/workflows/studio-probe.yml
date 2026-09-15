@@ -13,7 +13,7 @@ on:
         type: string
 permissions: {}
 concurrency:
-  group: studio-real-probe
+  group: studio-real-probe-${{ inputs.pr }}
   cancel-in-progress: false
 jobs:
   gate:
@@ -104,6 +104,9 @@ jobs:
           if-no-files-found: error
           retention-days: 3
   publish:
+    concurrency:
+      group: studio-real-publisher
+      cancel-in-progress: false
     needs: [gate, build]
     runs-on: ubuntu-latest
     timeout-minutes: 15
