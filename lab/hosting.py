@@ -116,6 +116,7 @@ class Pages:
 
     def probe(self, deployment, files):
         url = self.url(deployment['url'])
+        print(json.dumps({"probe_url": url, "deployment_id": deployment["id"]}))
         # Bound propagation wait. Compare real bytes, not only trusted-looking metadata.
         for attempt in range(6):
             try:
@@ -126,9 +127,9 @@ class Pages:
                     if name.endswith('.wasm') and mime != 'application/wasm':
                         raise ValueError('WASM MIME mismatch')
                 return
-            except (OSError, ValueError):
+            except (OSError, ValueError) as e:
                 if attempt == 5:
-                    raise ValueError('public deployment probe failed') from None
+                    raise ValueError("public deployment probe failed: " + str(e)) from None
                 time.sleep(3)
 
     def deploy(self, b, sha, metadata, files):
