@@ -1,0 +1,42 @@
+name: Lab Preview
+on:
+  workflow_run:
+    workflows: [Lab CI, Lab Quality]
+    types: [completed]
+  pull_request_target:
+    branches: [devel]
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR number to revalidate (0 for current devel)'
+        required: true
+        default: '0'
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+concurrency:
+  group: lab-publisher
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Reconcile from trusted code; never execute artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 lab/publish.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: verification.json
+          if-no-files-found: error
+          retention-days: 3
