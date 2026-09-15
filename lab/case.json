@@ -1,1 +1,1 @@
-{"message": "candidate A", "fail_ci": false, "fail_quality": false, "delay_seconds": 0}
+{"message": "candidate B quality rejected", "fail_ci": false, "fail_quality": true, "delay_seconds": 0}
