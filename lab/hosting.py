@@ -121,7 +121,9 @@ class Pages:
         for attempt in range(6):
             try:
                 for name, data in files.items():
-                    actual, mime = self.read(url + '/' + name)
+                    if name == '_headers':
+                        continue  # Pages consumes this configuration instead of serving it.
+                    actual, mime = self.read(url + '/' + ('' if name == 'index.html' else name))
                     if actual != data:
                         raise ValueError('static bytes mismatch: ' + name)
                     if name.endswith('.wasm') and mime != 'application/wasm':
