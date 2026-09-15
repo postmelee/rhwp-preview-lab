@@ -1,0 +1,143 @@
+name: Studio Preview
+on:
+  workflow_run:
+    workflows: [Lab CI, Lab Quality, Studio Preview Build]
+    types: [completed]
+  push:
+    branches: [devel]
+  pull_request_target:
+    branches: [devel]
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'postmelee/rhwp-preview-lab PR number; 0 builds current devel'
+        default: '0'
+        required: true
+        type: string
+      approve_sha:
+        description: 'Explicit full head SHA approval for an external PR'
+        required: false
+        type: string
+permissions: {}
+env:
+  PREVIEW_NAMESPACE: candidate-
+concurrency:
+  group: studio-preview-build-${{ github.event.workflow_run.head_repository.id || github.repository_id }}-${{ github.event.workflow_run.head_branch || inputs.pr || github.ref }}
+  queue: max
+  cancel-in-progress: false
+jobs:
+  gate:
+    if: github.repository == 'postmelee/rhwp-preview-lab' && (github.ref == 'refs/heads/main' || github.event_name == 'push' || github.event_name == 'pull_request_target')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      harness: ${{ steps.harness.outputs.sha }}
+      allowed: ${{ steps.gate.outputs.allowed }}
+      closed: ${{ steps.gate.outputs.closed }}
+      sha: ${{ steps.gate.outputs.sha }}
+      pr: ${{ steps.gate.outputs.pr }}
+      base_sha: ${{ steps.gate.outputs.base_sha }}
+      builds: ${{ steps.reuse.outputs.builds }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+      - id: harness
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Resolve current request and all applicable CI
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node lab/candidate_request.cjs
+      - name: Reuse previously published immutable assets
+        id: reuse
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: python3 scripts/preview/reuse.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: studio-gate-${{ github.run_attempt }}
+          path: preview-request.json
+          retention-days: 3
+  build:
+    needs: gate
+    if: needs.gate.outputs.allowed == 'true' && needs.gate.outputs.closed != 'true' && needs.gate.outputs.builds != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        sha: ${{ fromJSON(needs.gate.outputs.builds) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      RUSTUP_TOOLCHAIN: 1.93.1
+      GIT_LFS_SKIP_SMUDGE: '1'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/source/target/studio-preview
+      SOURCE_SHA: ${{ matrix.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: harness
+          ref: ${{ needs.gate.outputs.harness }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: postmelee/rhwp-preview-lab
+          ref: ${{ matrix.sha }}
+          path: source
+          persist-credentials: false
+      - name: Build exact source static contract fixture
+        run: python3 harness/lab/candidate_build.py source "$SOURCE_SHA"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: studio-static-${{ matrix.sha }}-${{ github.run_attempt }}
+          path: source/rhwp-studio/dist/
+          if-no-files-found: error
+          retention-days: 3
+  publish:
+    needs: [gate, build]
+    if: always() && needs.gate.result == 'success'
+    concurrency:
+      group: studio-preview-publisher
+      queue: max
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.gate.outputs.harness }}
+          persist-credentials: false
+      - run: npm --prefix scripts/preview ci --ignore-scripts --no-audit
+      - name: Recheck live gate and publish static bytes only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PREVIEW_BLOCKED: ${{ needs.gate.outputs.allowed != 'true' || (needs.build.result != 'success' && needs.gate.outputs.builds != '[]') }}
+          PREVIEW_CLOSED: ${{ needs.gate.outputs.closed }}
+          PREVIEW_PR: ${{ needs.gate.outputs.pr }}
+          SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+          SOURCE_BASE_SHA: ${{ needs.gate.outputs.base_sha }}
+          APPROVE_SHA: ${{ inputs.approve_sha }}
+        run: python3 lab/candidate_publish.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: studio-verification-${{ github.run_attempt }}
+          path: studio-verification.json
+          retention-days: 3

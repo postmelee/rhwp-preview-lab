@@ -79,7 +79,7 @@ async function inspect(repository, number, read = api) {
   const reason = !sameRequest(pr, fresh) ? 'request-changed-during-gate' : extra ? `observed-workflow-not-success:${extra.name}:${extra.id}` : audit.reason;
   return {allowed: sameRequest(pr, fresh) && !extra && audit.publish === 'true' && audit.conclusion === 'success',
     repository, number, sha:pr.head.sha, base_sha:pr.base.sha, head_repository:pr.head.repo.full_name,
-    head_repository_id:pr.head.repo.id, external:pr.head.repo.id !== pr.base.repo.id, policy, audit, reason, runs:evidence};
+    head_repository_id:pr.head.repo.id, head_branch:pr.head.ref, external:pr.head.repo.id !== pr.base.repo.id, policy, audit, reason, runs:evidence};
 }
 function verifyPolicy(repository, baseSha, read=api) {
   const hashes=JSON.parse(fs.readFileSync(path.join(__dirname,'trusted-policy.json'),'utf8'));

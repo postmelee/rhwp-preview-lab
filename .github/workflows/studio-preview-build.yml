@@ -1,0 +1,41 @@
+# PR source executes only in the native PR context (including GitHub fork approval).
+name: Studio Preview Build
+on:
+  pull_request:
+    branches: [devel]
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+concurrency:
+  group: studio-preview-source-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.repository == 'postmelee/rhwp-preview-lab'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RUSTUP_TOOLCHAIN: 1.93.1
+      GIT_LFS_SKIP_SMUDGE: '1'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/source/target/studio-preview
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: harness
+          ref: main
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+          persist-credentials: false
+      - name: Build exact source static contract fixture
+        run: python3 harness/lab/candidate_build.py source "$SOURCE_SHA"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: studio-static-${{ github.event.pull_request.head.sha }}-${{ github.run_attempt }}
+          path: source/rhwp-studio/dist/
+          if-no-files-found: error
+          retention-days: 3
