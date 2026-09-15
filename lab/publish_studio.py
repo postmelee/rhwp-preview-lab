@@ -13,7 +13,7 @@ run=os.environ['GITHUB_RUN_ID']; attempt=os.environ['GITHUB_RUN_ATTEMPT']
 def guard():
     raw=subprocess.check_output(['node','scripts/preview/gate.cjs','edwardkim/rhwp',str(number)],text=True)
     result=json.loads(raw)
-    if not result['allowed'] or result['sha'] != sha:
+    if not result['allowed'] or result['sha'] != sha or result['base_sha'] != os.environ.get('SOURCE_BASE_SHA',result['base_sha']):
         raise ValueError('source or CI changed before publish')
     if number:
         if os.environ.get('APPROVE_SHA') != sha:
@@ -25,22 +25,24 @@ def guard():
 
 request=guard()
 artifacts=pages(f'{ROOT}/actions/runs/{run}/artifacts','artifacts')
-found=[a for a in artifacts if a['name']==f'studio-static-{sha}-{attempt}' and not a['expired']]
-if len(found)!=1 or found[0]['size_in_bytes']>100*1024*1024: raise ValueError('artifact identity or size')
-a=found[0]; data=api(f"{ROOT}/actions/artifacts/{a['id']}/zip",raw=True)
-verified=validate_zip(data,sha,run,attempt)
-if a.get('digest')!='sha256:'+verified['sha256']: raise ValueError('artifact digest mismatch')
-with zipfile.ZipFile(io.BytesIO(data)) as z:
-    if any(n.startswith('samples/') or n in ('sw.js','registerSW.js','manifest.webmanifest') for n in z.namelist()):
-        raise ValueError('sample corpus or PWA included')
+def verified_asset(source_sha):
+    found=[a for a in artifacts if a['name']==f'studio-static-{source_sha}-{attempt}' and not a['expired']]
+    if len(found)!=1 or found[0]['size_in_bytes']>100*1024*1024: raise ValueError('artifact identity or size')
+    a=found[0]; data=api(f"{ROOT}/actions/artifacts/{a['id']}/zip",raw=True)
+    verified=validate_zip(data,source_sha,run,attempt)
+    if a.get('digest')!='sha256:'+verified['sha256']: raise ValueError('artifact digest mismatch')
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        if any(n.startswith('samples/') or n in ('sw.js','registerSW.js','manifest.webmanifest') for n in z.namelist()):
+            raise ValueError('sample corpus or PWA included')
+    return a,data,verified
+
+a,data,verified=verified_asset(sha)
 host=hosting.Pages()
-asset=host.asset(data,sha,verified)
 baseline=None
 if number:
-    devel=hosting.latest_pointers(host.deployments()).get('studio-devel')
-    if not devel or hosting.meta(devel)['sha'] != request['base_sha']:
-        raise ValueError('exact base preview unavailable')
-    baseline=host.api('/deployments/'+hosting.meta(devel)['asset'])
+    _,base_data,base_verified=verified_asset(request['base_sha'])
+    baseline=host.asset(base_data,request['base_sha'],base_verified)
+asset=host.asset(data,sha,verified)
 pointer,url=host.pointer(f'studio-pr-{number}' if number else 'studio-devel',asset,baseline,guard,external=bool(number))
 guard()
 # Keep all current real-source pointers and their referenced immutable assets.
@@ -56,6 +58,6 @@ for d in deployments:
         deleted.append(d['id'])
 remaining=host.deployments()
 if set(deleted)&{d['id'] for d in remaining}: raise ValueError('cleanup unconfirmed')
-result={**verified,**request,'run_id':run,'attempt':attempt,'artifact_id':a['id'],'state':'hosted','url':url,'immutable_url':asset['url'],'deployment_id':pointer['id'],'asset_id':asset['id'],'deleted':deleted,'remaining':len(remaining)}
+result={**verified,**request,'run_id':run,'attempt':attempt,'artifact_id':a['id'],'state':'hosted','url':url,'immutable_url':asset['url'],'deployment_id':pointer['id'],'asset_id':asset['id'],'deleted':deleted,'remaining':len(remaining),'baseline_url':baseline['url'] if baseline else None}
 pathlib.Path('studio-verification.json').write_text(json.dumps(result,indent=2)+'\n')
 with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('```json\n'+json.dumps(result,indent=2)+'\n```\n')

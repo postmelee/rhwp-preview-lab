@@ -26,6 +26,8 @@ jobs:
     outputs:
       sha: ${{ steps.gate.outputs.sha }}
       pr: ${{ steps.gate.outputs.pr }}
+      base_sha: ${{ steps.gate.outputs.base_sha }}
+      builds: ${{ steps.gate.outputs.builds }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -43,7 +45,9 @@ jobs:
           r=json.load(open('request.json'))
           assert r['allowed']
           if r['number']: assert os.environ['APPROVE_SHA']==r['sha'], 'current SHA approval required'
-          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write(f"sha={r['sha']}\npr={r['number']}\n")
+          builds=list(dict.fromkeys([r['sha'],r['base_sha']]))
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write(f"sha={r['sha']}\npr={r['number']}\nbase_sha={r['base_sha']}\nbuilds={json.dumps(builds)}\n")
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
@@ -53,6 +57,10 @@ jobs:
           retention-days: 3
   build:
     needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        sha: ${{ fromJSON(needs.gate.outputs.builds) }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -61,7 +69,7 @@ jobs:
       RUSTUP_TOOLCHAIN: 1.93.1
       GIT_LFS_SKIP_SMUDGE: '1'
       CARGO_TARGET_DIR: ${{ github.workspace }}/source/target/studio-preview
-      SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+      SOURCE_SHA: ${{ matrix.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -70,7 +78,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: edwardkim/rhwp
-          ref: ${{ needs.gate.outputs.sha }}
+          ref: ${{ matrix.sha }}
           path: source
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -91,7 +99,7 @@ jobs:
           python3 ../harness/scripts/preview/prepare.py stamp . "$SOURCE_SHA"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: studio-static-${{ needs.gate.outputs.sha }}-${{ github.run_attempt }}
+          name: studio-static-${{ matrix.sha }}-${{ github.run_attempt }}
           path: source/rhwp-studio/dist/
           if-no-files-found: error
           retention-days: 3
@@ -115,6 +123,7 @@ jobs:
           CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
           PREVIEW_PR: ${{ needs.gate.outputs.pr }}
           SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+          SOURCE_BASE_SHA: ${{ needs.gate.outputs.base_sha }}
           APPROVE_SHA: ${{ inputs.approve_sha }}
         run: python3 lab/publish_studio.py
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

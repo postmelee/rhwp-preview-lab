@@ -1,0 +1,8 @@
+{
+  "scripts/ci-impact-classifier.cjs": "dc458a228ea78d7f8d025eee7b66691c9347fb95",
+  "scripts/ci-impact-policy.cjs": "a98e62a315bbc1659d0924028ad949571e82ea69",
+  "scripts/ci-workflow-evidence.cjs": "86df3340e112d066c2982c4da3c70fdcdf9c64d2",
+  ".github/workflows/ci.yml": "3692af1d69d409ae64c054e2f95280eeb348ddcb",
+  ".github/workflows/codeql.yml": "c2b7ce63cd963122ae89a10d3206cfba9eed4e16",
+  ".github/workflows/render-diff.yml": "c0152a1b61d4f87ff22f4f3505e1cc73bd487530"
+}

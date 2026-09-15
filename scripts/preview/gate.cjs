@@ -1,5 +1,7 @@
 'use strict';
 // Executed from a trusted checkout only. GitHub data never selects executable code.
+const fs = require('node:fs');
+const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { classifyChanges } = require('../ci-impact-classifier.cjs');
 const { determinePolicy, auditPolicyRuns, selectLatestWorkflowRun, WORKFLOW_PATHS } = require('../ci-impact-policy.cjs');
@@ -79,8 +81,15 @@ async function inspect(repository, number, read = api) {
     repository, number, sha:pr.head.sha, base_sha:pr.base.sha, head_repository:pr.head.repo.full_name,
     head_repository_id:pr.head.repo.id, external:pr.head.repo.id !== pr.base.repo.id, policy, audit, reason, runs:evidence};
 }
-module.exports = {inspect, normalize, pages, sameRequest};
+function verifyPolicy(repository, baseSha, read=api) {
+  const hashes=JSON.parse(fs.readFileSync(path.join(__dirname,'trusted-policy.json'),'utf8'));
+  for (const [file,hash] of Object.entries(hashes)) {
+    if(read(`repos/${repository}/contents/${file}?ref=${baseSha}`).sha !== hash) throw Error(`trusted-policy-drift:${file}`);
+  }
+}
+module.exports = {inspect, normalize, pages, sameRequest, verifyPolicy};
 if (require.main === module) inspect(process.argv[2], Number(process.argv[3] || 0)).then(result => {
+  if(result.number && result.allowed) verifyPolicy(result.repository,result.base_sha);
   process.stdout.write(JSON.stringify(result, null, 2)+'\n');
   if (!result.allowed) process.exitCode = 2;
 }).catch(error => {process.stdout.write(JSON.stringify({allowed:false, reason:error.message})+'\n'); process.exitCode=2;});
