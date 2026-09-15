@@ -2,3 +2,4 @@ __pycache__/
 dist/
 verification.json
 *.zip
+node_modules/
