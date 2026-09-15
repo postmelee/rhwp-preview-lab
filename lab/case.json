@@ -1,1 +1,1 @@
-{"message":"external fork second head requires fresh approval","fail_ci":false,"fail_quality":false,"delay_seconds":0}
+{"message":"external fork quality failure must block publishing","fail_ci":false,"fail_quality":true,"delay_seconds":0}
