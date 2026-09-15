@@ -1,0 +1,15 @@
+name: Preview Queue Probe
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  serialized:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    concurrency:
+      group: studio-queue-contract-probe
+      queue: max
+      cancel-in-progress: false
+    steps:
+      - name: Hold one publisher slot briefly
+        run: sleep 25
