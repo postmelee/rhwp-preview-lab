@@ -24,3 +24,9 @@ Issue: edwardkim/rhwp#7159. 사용자의 다음 작업 진행 승인 범위.
 - fork CI 성공 후 승인 없으면 게시 대기, 이전 정상 고유 링크 유지. 내부 PR/devel 자동 게시 유지.
 - fork 고정 주소에는 자동 이동 대신 외부 기여 코드/민감 문서 주의 안내와 열기 링크를 표시한다. 코드 안전성 보증이나 외부 통신 차단으로 표현하지 않는다.
 - 로컬 권한·head 변경 계약 테스트와 내부 PR 회귀 실행 후 실제 별도 계정 fork 시험을 이어간다.
+
+## 실제 Studio 연결 시험 (2026-09-15)
+
+사용자 승인으로 `Studio Preview Probe` 수동 workflow를 추가한다. source repository는 edwardkim/rhwp로 고정하며 devel 또는 명시한 PR의 live head를 선택한다. trusted rhwp classifier/policy/evidence 모듈은 devel 0c9e28a481e662ff3b1823cfb1814084a13eb58b에서 가져왔다. 전체 CI audit 뒤 read-only release 빌드를 하고, 새 publisher job에서 gate와 SHA를 재조회한다. fork 소스 빌드 job에 배포 secret 또는 write permission을 주지 않는다.
+
+실제 제품은 `studio-devel`/`studio-pr-N` branch와 `rhwp-studio-probe:v1:` metadata namespace로 구분한다. 기존 최소 WASM 시험과 서로 배포를 삭제하지 않는다. 기존 CI dev/merge 산출물은 재사용하지 않으며 전용 release/npm cache를 복원하고 devel만 저장한다. 이 수동 시험은 rhwp 운영 trigger 활성화가 아니다.
