@@ -18,5 +18,5 @@ expected=['gate']+(['build'] if not number else [f'build ({sha})',f'build ({base
 for name in expected:
  found=[j for j in jobs if j['name']==name and j['conclusion']=='success']
  if len(found)!=1:raise ValueError('source build not successful')
-os.environ.update(PREVIEW_PR=str(number),SOURCE_SHA=sha,SOURCE_BASE_SHA=base,APPROVE_SHA=sha if number else '',SOURCE_ARTIFACT_RUN=source,SOURCE_ARTIFACT_ATTEMPT='1')
+os.environ.update(PREVIEW_PR=str(number),SOURCE_SHA=sha,SOURCE_BASE_SHA=base,APPROVE_SHA=sha if number else '',SOURCE_ARTIFACT_RUN=os.environ['GITHUB_RUN_ID'] if os.environ.get('REPACKED')=='true' else source,SOURCE_ARTIFACT_ATTEMPT=os.environ['GITHUB_RUN_ATTEMPT'] if os.environ.get('REPACKED')=='true' else '1')
 runpy.run_path('lab/publish_studio.py',run_name='__main__')

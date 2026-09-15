@@ -13,8 +13,40 @@ concurrency:
   group: studio-real-publisher
   cancel-in-progress: false
 jobs:
+  repack:
+    if: github.ref == 'refs/heads/main' && inputs.source_run == '34949858736'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      matrix:
+        sha: [c0f80c0ac6eb249bf1fb82a8f954b7035e15bb53, 769582fc856f162e57604b318d41414d7b026345]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: edwardkim/rhwp
+          ref: ${{ matrix.sha }}
+          path: source
+          sparse-checkout: assets/fonts
+          persist-credentials: false
+      - name: Repackage validated bytes and repository fonts without executing source
+        working-directory: harness
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ matrix.sha }}
+        run: python3 lab/repack_studio.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: studio-static-${{ matrix.sha }}-${{ github.run_attempt }}
+          path: harness/repacked-dist/
+          retention-days: 3
+          if-no-files-found: error
   publish:
-    if: github.ref == 'refs/heads/main'
+    needs: repack
+    if: always() && github.ref == 'refs/heads/main' && (needs.repack.result == 'success' || inputs.source_run == '34949552214')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,6 +61,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
           SOURCE_RUN: ${{ inputs.source_run }}
+          REPACKED: ${{ needs.repack.result == 'success' }}
         run: python3 lab/recover_studio.py
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
