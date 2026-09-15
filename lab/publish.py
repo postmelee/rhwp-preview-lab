@@ -129,7 +129,12 @@ def main():
             return [{'state':'ignored-event'}]
     # GitHub keeps at most one pending concurrency member. Any surviving event
     # must therefore reconcile every current request, including devel.
-    numbers = [0] + [p['number'] for p in pages(f'{ROOT}/pulls?state=open&base=devel')]
+    requests = pages(f'{ROOT}/pulls?state=all&base=devel')
+    for pr in requests:
+        if pr['state'] == 'closed' and bot_comment(pr['number']):
+            if pull(pr['number'])['state'] == 'closed':
+                comment(pr['number'], f'{MARKER}\n## 미리보기 시험 종료\n\nPR이 닫혔습니다. 실제 호스팅 자원은 생성하지 않았습니다.')
+    numbers = [0] + [p['number'] for p in requests if p['state'] == 'open']
     results = prefix
     for number in numbers:
         try:
