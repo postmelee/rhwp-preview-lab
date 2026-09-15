@@ -1,0 +1,83 @@
+{
+  "files": 59,
+  "bytes": 45016750,
+  "sha256": "6a0add35da45429cbaa8a1a22f6b9d24c9badd6337c868e0858bde689987a601",
+  "allowed": true,
+  "repository": "edwardkim/rhwp",
+  "number": 7118,
+  "sha": "c0f80c0ac6eb249bf1fb82a8f954b7035e15bb53",
+  "base_sha": "769582fc856f162e57604b318d41414d7b026345",
+  "head_repository": "kidsnote/rhwp",
+  "head_repository_id": 1348263708,
+  "external": true,
+  "policy": {
+    "policy_version": "6",
+    "policy_context": "CI Impact Policy",
+    "base_sha": "769582fc856f162e57604b318d41414d7b026345",
+    "decision": "selective",
+    "skip_eligible": "true",
+    "head_trust": "controller-mediated-fork",
+    "enforcement_surface_changed": "false",
+    "trusted_review_fast_pass": "false",
+    "review_candidate_sha": "",
+    "expected_workflows": {
+      "CI": "true",
+      "CodeQL": "true",
+      "Render Diff": "true"
+    },
+    "reason": "classified:rust+rust-render+sample-security-sweep",
+    "classification": {
+      "rust_required": "true",
+      "frontend_mode": "none",
+      "render_required": "true",
+      "native_skia_required": "true",
+      "codeql_languages": "rust",
+      "classification_status": "classified",
+      "classifier_version": "7",
+      "reason": "classified:rust+rust-render+sample-security-sweep"
+    },
+    "review_reuse_reason": "review-reuse-not-required",
+    "ci_run_expected": "true",
+    "status_description": "v=6;cv=7;mode=selective;rfp=0;wf=111;rust=1;fe=none;render=1;skia=1;ql=rs;b=769582fc856f162e57604b318d41414d7b026345"
+  },
+  "audit": {
+    "publish": "true",
+    "conclusion": "success",
+    "reason": "audit:stage3-5-truth-table"
+  },
+  "reason": "audit:stage3-5-truth-table",
+  "runs": [
+    {
+      "name": "CI",
+      "id": 34945004691,
+      "attempt": 1,
+      "url": "https://github.com/edwardkim/rhwp/actions/runs/34945004691"
+    },
+    {
+      "name": "CodeQL",
+      "id": 34945004713,
+      "attempt": 1,
+      "url": "https://github.com/edwardkim/rhwp/actions/runs/34945004713"
+    },
+    {
+      "name": "Render Diff",
+      "id": 34945004490,
+      "attempt": 1,
+      "url": "https://github.com/edwardkim/rhwp/actions/runs/34945004490"
+    }
+  ],
+  "run_id": "34952019828",
+  "attempt": "1",
+  "artifact_id": 10389796886,
+  "state": "hosted",
+  "url": "https://studio-pr-7118.rhwp-preview-lab.pages.dev",
+  "immutable_url": "https://bc742177.rhwp-preview-lab.pages.dev",
+  "deployment_id": "55fdfc37-d851-43a7-b75d-6c6b58b049b2",
+  "asset_id": "bc742177-9c7e-4ddf-a7d1-dc67f088cf8f",
+  "deleted": [
+    "ecf803b8-7241-4ca8-b4bd-bb9c9d5f4186",
+    "3f43b8e1-3f5e-49d0-ac90-0944956a6880"
+  ],
+  "remaining": 8,
+  "baseline_url": "https://531238ca.rhwp-preview-lab.pages.dev"
+}

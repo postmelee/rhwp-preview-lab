@@ -1,0 +1,23 @@
+{
+  "pr_sha": "c0f80c0ac6eb249bf1fb82a8f954b7035e15bb53",
+  "pr_url": "https://bc742177.rhwp-preview-lab.pages.dev",
+  "journey": [
+    "new document",
+    "type text",
+    "HWPX save via native confirmation",
+    "new document",
+    "recent document reopen",
+    "allow saved test file this time",
+    "visually verify text"
+  ],
+  "expected_text": "Preview PR 7118 roundtrip",
+  "saved_bytes": 7363,
+  "saved_sha256": "ad16ffc788f597e52c9d3a8113cc1ce4ea73cc80f7813ff6165eaaf52eba0649",
+  "saved_xml_contains_text": true,
+  "reopened_visual_text_matches": true,
+  "devel_sha": "4fddb1bb7244fb478ea18f927aca273f93ac7322",
+  "devel_scope": "initialization and text editing only",
+  "baseline_sha": "769582fc856f162e57604b318d41414d7b026345",
+  "baseline_scope": "initialization and visible SHA only",
+  "automation_note": "browser semantic click did not open save picker; native button click did. Native one-time permission completed recent-file reopening."
+}

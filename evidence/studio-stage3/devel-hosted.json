@@ -1,0 +1,23 @@
+{
+  "files": 59,
+  "bytes": 45073314,
+  "sha256": "8f4641718b44c1d33deb524be71e9f2bd29aa354d8683e26cd2b9bf8da6930bb",
+  "allowed": true,
+  "repository": "edwardkim/rhwp",
+  "number": 0,
+  "sha": "4fddb1bb7244fb478ea18f927aca273f93ac7322",
+  "base_sha": "4fddb1bb7244fb478ea18f927aca273f93ac7322",
+  "reason": "trusted-devel-deployment-build-only",
+  "runs": [],
+  "run_id": "34951384000",
+  "attempt": "1",
+  "artifact_id": 10389871020,
+  "state": "hosted",
+  "url": "https://studio-devel.rhwp-preview-lab.pages.dev",
+  "immutable_url": "https://835342c0.rhwp-preview-lab.pages.dev",
+  "deployment_id": "466caafc-0efd-4ede-946c-7669ad27cb60",
+  "asset_id": "835342c0-5a05-466c-8e8a-8c2eda42aca5",
+  "deleted": [],
+  "remaining": 10,
+  "baseline_url": null
+}
