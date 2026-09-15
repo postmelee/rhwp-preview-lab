@@ -2,6 +2,7 @@
 // Executed from a trusted checkout only. GitHub data never selects executable code.
 const fs = require('node:fs');
 const path = require('node:path');
+const {createHash}=require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { classifyChanges } = require('../ci-impact-classifier.cjs');
 const { determinePolicy, auditPolicyRuns, selectLatestWorkflowRun, WORKFLOW_PATHS } = require('../ci-impact-policy.cjs');
@@ -81,13 +82,21 @@ async function inspect(repository, number, read = api) {
     repository, number, sha:pr.head.sha, base_sha:pr.base.sha, head_repository:pr.head.repo.full_name,
     head_repository_id:pr.head.repo.id, head_branch:pr.head.ref, external:pr.head.repo.id !== pr.base.repo.id, policy, audit, reason, runs:evidence};
 }
+function verifyRuntime(hashes,readFile=file=>fs.readFileSync(path.join(__dirname,'../..',file))) {
+  for(const [file,expected] of Object.entries(hashes).filter(([file])=>file.startsWith('scripts/'))) {
+    const bytes=readFile(file);
+    const actual=createHash('sha1').update(Buffer.from(`blob ${bytes.length}\0`)).update(bytes).digest('hex');
+    if(actual!==expected)throw Error(`trusted-runtime-policy-drift:${file}`);
+  }
+}
 function verifyPolicy(repository, baseSha, read=api) {
   const hashes=JSON.parse(fs.readFileSync(path.join(__dirname,'trusted-policy.json'),'utf8'));
+  verifyRuntime(hashes);
   for (const [file,hash] of Object.entries(hashes)) {
     if(read(`repos/${repository}/contents/${file}?ref=${baseSha}`).sha !== hash) throw Error(`trusted-policy-drift:${file}`);
   }
 }
-module.exports = {inspect, normalize, pages, sameRequest, verifyPolicy};
+module.exports = {inspect, normalize, pages, sameRequest, verifyPolicy, verifyRuntime};
 if (require.main === module) inspect(process.argv[2], Number(process.argv[3] || 0)).then(result => {
   if(result.number && result.allowed) verifyPolicy(result.repository,result.base_sha);
   process.stdout.write(JSON.stringify(result, null, 2)+'\n');

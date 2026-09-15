@@ -29,3 +29,12 @@ test('latest failed rerun does not reuse old success',async()=>{
 test('incomplete pagination refuses partial evidence',()=>assert.throws(()=>pages('x',null,()=>Array(100).fill({})),/incomplete pagination/));
 test('devel is a deployment build without duplicate PR CI',async()=>assert.equal((await inspect('owner/rhwp',0,()=>({object:{sha}}))).allowed,true));
 test('invalid request cannot select an API or executable path',async()=>await assert.rejects(inspect('../other',1,()=>{}),/invalid request/));
+
+test('trusted controller rejects a mismatched local policy module',()=>{
+ const {verifyRuntime}=require('./gate.cjs');
+ assert.throws(()=>verifyRuntime({'scripts/ci-impact-policy.cjs':'0'.repeat(40)},()=>Buffer.from('wrong policy')),/trusted-runtime-policy-drift/);
+});
+test('local canonical policy modules match the pinned runtime contract',()=>{
+ const {verifyRuntime}=require('./gate.cjs');
+ verifyRuntime(require('./trusted-policy.json'));
+});
