@@ -37,3 +37,9 @@ gh workflow disable preview.yml --repo postmelee/rhwp-preview-lab
 ```
 
 GitHub Pages·Cloudflare·rhwp 운영 설정에는 영향이 없다.
+
+## 실제 rhwp release probe
+
+`Rhwp Release Probe`는 rhwp 고정 SHA `769582fc856f162e57604b318d41414d7b026345`를 Linux runner에서 최적화 빌드한다. PWA와 public sample corpus를 제외하고 같은 ZIP 검사 함수를 별도 읽기 전용 job에서 실행한다. PR gate 실험과 제품 build 실험을 구분하며 Cloudflare에는 배포하지 않는다.
+
+후속 외부 설정: [Cloudflare 준비](CLOUDFLARE_NEXT.md).
