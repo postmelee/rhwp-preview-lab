@@ -31,7 +31,7 @@ def validate_zip(data, sha, run_id, attempt):
             seen.add(name); total += f.file_size
             if f.file_size > 25 * 1024 * 1024 or total > 100 * 1024 * 1024:
                 raise ValueError('asset size limit')
-            if name.rsplit('.', 1)[-1] not in ('html', 'json', 'js', 'css', 'wasm', 'woff', 'woff2', 'png', 'svg', 'jpg', 'ico', 'txt'):
+            if name.rsplit('.', 1)[-1] not in ('html', 'json', 'js', 'css', 'wasm', 'woff', 'woff2', 'png', 'svg', 'jpg', 'ico', 'txt', 'md', 'ts'):
                 raise ValueError('not an allowed static file')
         if not {'index.html', 'build.json'} <= seen:
             raise ValueError('missing entry or provenance')

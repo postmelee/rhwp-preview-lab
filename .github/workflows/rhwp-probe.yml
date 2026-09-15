@@ -1,0 +1,75 @@
+name: Rhwp Release Probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: lab-rhwp-release-probe
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUSTUP_TOOLCHAIN: 1.93.1
+      SOURCE_SHA: 769582fc856f162e57604b318d41414d7b026345
+      GIT_LFS_SKIP_SMUDGE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: edwardkim/rhwp
+          ref: 769582fc856f162e57604b318d41414d7b026345
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.15.0'
+      - name: Install pinned WASM toolchain
+        run: |
+          rustup toolchain install 1.93.1 --profile minimal --target wasm32-unknown-unknown
+          cargo install wasm-pack --version 0.15.0 --locked
+      - name: Build optimized exact-source WASM
+        working-directory: source
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          /usr/bin/time -p scripts/wasm-pack-locked.sh --target web --out-dir pkg --release
+      - name: Build static preview without sample corpus or PWA
+        working-directory: source/rhwp-studio
+        run: |
+          npm ci --no-audit --prefer-offline
+          python3 - <<'PY'
+          import pathlib, shutil
+          shutil.rmtree('public/samples')
+          pathlib.Path('vite.preview.config.ts').write_text("import config from './vite.config';\nexport default {...config, base:'/', plugins:config.plugins.flat().filter(p=>!p.name.startsWith('vite-plugin-pwa'))};\n")
+          PY
+          /usr/bin/time -p npm run build -- --config vite.preview.config.ts
+          python3 - <<'PY'
+          import json, os, pathlib
+          pathlib.Path('dist/build.json').write_text(json.dumps({'sha':os.environ['SOURCE_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],'attempt':os.environ['GITHUB_RUN_ATTEMPT']}))
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rhwp-static-${{ github.run_attempt }}
+          path: source/rhwp-studio/dist/
+          if-no-files-found: error
+          retention-days: 3
+  verify:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Apply the same static ZIP contract without executing artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 lab/verify_rhwp.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rhwp-verification-${{ github.run_attempt }}
+          path: verification.json
+          retention-days: 3
