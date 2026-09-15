@@ -14,3 +14,13 @@ Issue: edwardkim/rhwp#7159. 사용자의 다음 작업 진행 승인 범위.
 - 행렬: devel 최초, PR 최초/연속 push/force-push, Quality 실패, 수동 중복, devel 이동과 baseline 보존, close/reopen 및 이전 ID 제거. fork는 별도 작성자 권한 확보 전 미검증으로 남김.
 
 현재 공개 rhwp 수동 배포는 고유 URL로 보존한다. 시험 프로젝트 root는 이 시험의 devel WASM 앱으로 바뀐다. rhwp 운영 저장소는 변경하지 않는다.
+
+## Fork 게시 승인 추가 (2026-09-15)
+
+사용자 승인: fork 미리보기의 SHA별 게시 승인 추가를 진행한다.
+- Lab Preview 수동 실행의 PR 번호와 전체 approve_sha로 한 실행만 승인한다. actor와 rerun triggering_actor 모두 현재 write/maintain/admin 권한을 확인한다.
+- 승인 범위는 PR 번호·head repository ID·전체 SHA. 배포 직전 live identity와 권한을 재조회한다. 자동 이벤트·다른 PR·새 head에 승인 승계 없음.
+- 승인은 영구 저장하지 않는다. 동일 SHA도 별도 수동 재게시에는 다시 명시한다. 대기 concurrency가 취소한 승인 실행은 재요청해야 한다.
+- fork CI 성공 후 승인 없으면 게시 대기, 이전 정상 고유 링크 유지. 내부 PR/devel 자동 게시 유지.
+- fork 고정 주소에는 자동 이동 대신 외부 기여 코드/민감 문서 주의 안내와 열기 링크를 표시한다. 코드 안전성 보증이나 외부 통신 차단으로 표현하지 않는다.
+- 로컬 권한·head 변경 계약 테스트와 내부 PR 회귀 실행 후 실제 별도 계정 fork 시험을 이어간다.
