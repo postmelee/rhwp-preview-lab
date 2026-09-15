@@ -1,0 +1,146 @@
+name: Studio Preview Probe
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'edwardkim/rhwp PR number; 0 builds current devel'
+        default: '0'
+        required: true
+        type: string
+      approve_sha:
+        description: 'Explicit full head SHA approval for a real PR probe'
+        required: false
+        type: string
+permissions: {}
+concurrency:
+  group: studio-real-probe
+  cancel-in-progress: false
+jobs:
+  gate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.gate.outputs.sha }}
+      pr: ${{ steps.gate.outputs.pr }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Evaluate current source and all applicable CI from trusted policy
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_PR: ${{ inputs.pr }}
+          APPROVE_SHA: ${{ inputs.approve_sha }}
+        run: |
+          node scripts/preview/gate.cjs edwardkim/rhwp "$PREVIEW_PR" > request.json
+          python3 - <<'PY'
+          import json,os
+          r=json.load(open('request.json'))
+          assert r['allowed']
+          if r['number']: assert os.environ['APPROVE_SHA']==r['sha'], 'current SHA approval required'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write(f"sha={r['sha']}\npr={r['number']}\n")
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: studio-gate-${{ github.run_attempt }}
+          path: request.json
+          retention-days: 3
+  build:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      RUSTUP_TOOLCHAIN: 1.93.1
+      GIT_LFS_SKIP_SMUDGE: '1'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/source/target/studio-preview
+      SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: edwardkim/rhwp
+          ref: ${{ needs.gate.outputs.sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.15.0'
+      - name: Restore release dependencies (no PR cache writer)
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.npm
+            source/target/studio-preview
+          key: studio-release-${{ runner.os }}-1.93.1-${{ hashFiles('source/Cargo.lock', 'source/rhwp-studio/package-lock.json') }}-${{ needs.gate.outputs.sha }}
+          restore-keys: studio-release-${{ runner.os }}-1.93.1-${{ hashFiles('source/Cargo.lock', 'source/rhwp-studio/package-lock.json') }}-
+      - name: Install pinned release toolchain
+        run: |
+          rustup toolchain install 1.93.1 --profile minimal --target wasm32-unknown-unknown
+          cargo install wasm-pack --version 0.15.0 --locked
+      - name: Build exact release source without deployment credentials
+        working-directory: source
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          scripts/wasm-pack-locked.sh --target web --out-dir pkg --release
+          python3 ../harness/scripts/preview/prepare.py prepare . "$SOURCE_SHA"
+          npm --prefix rhwp-studio ci --no-audit --prefer-offline
+          npm --prefix rhwp-studio run build -- --config vite.preview.config.ts
+          python3 ../harness/scripts/preview/prepare.py stamp . "$SOURCE_SHA"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: studio-static-${{ needs.gate.outputs.sha }}-${{ github.run_attempt }}
+          path: source/rhwp-studio/dist/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Save only trusted devel release cache
+        if: needs.gate.outputs.pr == '0' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.npm
+            source/target/studio-preview
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+  publish:
+    needs: [gate, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Recheck live gate and publish static bytes only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PREVIEW_PR: ${{ needs.gate.outputs.pr }}
+          SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+          APPROVE_SHA: ${{ inputs.approve_sha }}
+        run: python3 lab/publish_studio.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: studio-verification-${{ github.run_attempt }}
+          path: studio-verification.json
+          retention-days: 3
