@@ -1,1 +1,1 @@
-{"message": "Quality failure must block publishing", "fail_ci": false, "fail_quality": true, "delay_seconds": 0}
+{"message": "new head B replaces A", "fail_ci": false, "fail_quality": false, "delay_seconds": 0}
