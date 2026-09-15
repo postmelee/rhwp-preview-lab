@@ -76,17 +76,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '24.15.0'
-      - name: Restore release dependencies (no PR cache writer)
-        id: cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.npm
-            source/target/studio-preview
-          key: studio-release-${{ runner.os }}-1.93.1-${{ hashFiles('source/Cargo.lock', 'source/rhwp-studio/package-lock.json') }}-${{ needs.gate.outputs.sha }}
-          restore-keys: studio-release-${{ runner.os }}-1.93.1-${{ hashFiles('source/Cargo.lock', 'source/rhwp-studio/package-lock.json') }}-
       - name: Install pinned release toolchain
         run: |
           rustup toolchain install 1.93.1 --profile minimal --target wasm32-unknown-unknown
@@ -106,16 +95,6 @@ jobs:
           path: source/rhwp-studio/dist/
           if-no-files-found: error
           retention-days: 3
-      - name: Save only trusted devel release cache
-        if: needs.gate.outputs.pr == '0' && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.npm
-            source/target/studio-preview
-          key: ${{ steps.cache.outputs.cache-primary-key }}
   publish:
     needs: [gate, build]
     runs-on: ubuntu-latest

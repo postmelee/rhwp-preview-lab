@@ -30,3 +30,5 @@ Issue: edwardkim/rhwp#7159. 사용자의 다음 작업 진행 승인 범위.
 사용자 승인으로 `Studio Preview Probe` 수동 workflow를 추가한다. source repository는 edwardkim/rhwp로 고정하며 devel 또는 명시한 PR의 live head를 선택한다. trusted rhwp classifier/policy/evidence 모듈은 devel 0c9e28a481e662ff3b1823cfb1814084a13eb58b에서 가져왔다. 전체 CI audit 뒤 read-only release 빌드를 하고, 새 publisher job에서 gate와 SHA를 재조회한다. fork 소스 빌드 job에 배포 secret 또는 write permission을 주지 않는다.
 
 실제 제품은 `studio-devel`/`studio-pr-N` branch와 `rhwp-studio-probe:v1:` metadata namespace로 구분한다. 기존 최소 WASM 시험과 서로 배포를 삭제하지 않는다. 기존 CI dev/merge 산출물은 재사용하지 않으며 전용 release/npm cache를 복원하고 devel만 저장한다. 이 수동 시험은 rhwp 운영 trigger 활성화가 아니다.
+
+보안 보정: workflow_dispatch(main)에서 외부 PR 코드를 빌드하면 Actions runtime cache도 main 범위일 수 있다. 수동 실제-source probe는 cache restore/save를 모두 하지 않는다. PR별 격리 cache 재사용은 운영 pull_request 이벤트 배선에서만 적용한다.
