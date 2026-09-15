@@ -215,9 +215,8 @@ class Pages:
                 raise ValueError('production pointer is not canonical')
         elif expected not in aliases:
             raise ValueError('branch alias not assigned')
-        actual, _ = self.read(expected + '/preview.json')
-        if actual != files['preview.json']:
-            raise ValueError('branch alias not updated yet')
+        # Branch aliases propagate separately from the immutable deployment URL.
+        self.probe({'url': expected, 'id': d['id']}, {'preview.json': files['preview.json']})
         return d, expected
 
     def cleanup(self, open_numbers, guard):

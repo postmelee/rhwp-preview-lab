@@ -50,3 +50,26 @@ class CanonicalHtml(unittest.TestCase):
         self.assertEqual(served_path('index.html'),'')
         self.assertEqual(served_path('docs/index.html'),'docs/')
         self.assertEqual(served_path('assets/core.wasm'),'assets/core.wasm')
+
+class NamespaceIsolation(unittest.TestCase):
+    def test_namespaced_cleanup_preserves_other_deployments(self):
+        import hosting
+        from unittest.mock import patch
+        foreign = deployment('foreign', 'pr-9', 'pointer', asset='outside')
+        asset = deployment('asset', 'candidate-assets')
+        pointer = deployment('pointer', 'candidate-devel', 'pointer', asset='asset')
+        for d in (asset, pointer):
+            md = d['deployment_trigger']['metadata']
+            md['commit_message'] = md['commit_message'].replace(PREFIX, PREFIX + 'candidate-', 1)
+        with patch.object(hosting, 'NAMESPACE', 'candidate-'), patch.object(hosting, 'PREFIX', PREFIX + 'candidate-'):
+            self.assertIsNone(hosting.meta(foreign))
+            self.assertEqual(hosting.branch(pointer), 'devel')
+            self.assertEqual(hosting.retained_ids([foreign, asset, pointer], [], None), {'asset', 'pointer'})
+
+    def test_probe_waits_for_stale_alias_bytes(self):
+        from unittest.mock import patch
+        p=Pages.__new__(Pages);p.domain='rhwp-preview-lab.pages.dev'
+        with patch.object(p, 'read', side_effect=[(b'old', 'application/json'), (b'new', 'application/json')]) as read, patch('hosting.time.sleep') as sleep:
+            p.probe({'url':'https://candidate-devel.rhwp-preview-lab.pages.dev', 'id':'pointer'}, {'preview.json':b'new'})
+            self.assertEqual(read.call_count, 2)
+            sleep.assert_called_once_with(3)
