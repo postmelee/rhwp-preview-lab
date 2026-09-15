@@ -43,3 +43,14 @@ gh workflow disable preview.yml --repo postmelee/rhwp-preview-lab
 `Rhwp Release Probe`는 rhwp 고정 SHA `769582fc856f162e57604b318d41414d7b026345`를 Linux runner에서 최적화 빌드한다. PWA와 public sample corpus를 제외하고 같은 ZIP 검사 함수를 별도 읽기 전용 job에서 실행한다. PR gate 실험과 제품 build 실험을 구분한다. 해당 release artifact는 최초 수동 Pages 배포로 검증했으며 [Studio 고유 URL](https://882d9256.rhwp-preview-lab.pages.dev)에 보존한다. 자동 PR/devel 실험은 최소 WASM 앱이며 실제 rhwp 제품으로 이식하기 전이다.
 
 설정·동작·제한: [Cloudflare 운영 상태](CLOUDFLARE_NEXT.md).
+
+
+## Fork 게시 승인
+
+Lab Preview의 Run workflow에서 branch `main`, `pr` 번호, `approve_sha`에 현재 전체 40자리 head SHA를 입력한다. fork CI 실행 승인은 GitHub의 기존 정책을 따르며, 이 입력은 CI 승인을 대체하거나 실패 CI를 우회하지 않는다.
+
+actor와 재실행 triggering_actor 모두 현재 write/maintain/admin 권한이 있어야 한다. 승인은 PR 번호·fork 저장소 ID·SHA와 해당 실행에만 유효하다. 영구 승인 라벨/댓글을 사용하지 않으며, 새 push와 이후 수동 재게시에는 다시 명시한다. 직렬화 대기 중 취소된 승인 실행도 자동 승계하지 않는다.
+
+승인 없는 fork는 성공 CI 확인 후 게시 대기로 표시하고 기존 정상 고유 링크를 유지한다. 내부 PR/devel은 자동 게시한다. fork 고정 주소는 자동 이동 대신 외부 코드/민감 문서 주의 안내와 열기 링크를 표시한다. 이는 게시 통제이며 악성 코드 판정이나 외부 통신 차단 기능이 아니다.
+
+실제 별도 작성자 fork 시험은 아직 미완료다. SHA 변경·권한 회수·다른 PR/저장소·승인 누락은 로컬 계약 테스트로 확인했다.

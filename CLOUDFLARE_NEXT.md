@@ -33,3 +33,14 @@
 fork 성공은 내부 PR 성공과 다르다. 별도 작성자 계정의 정상 fork PR과 maintainer 승인 경로가 아직 필요하다. rhwp 전체 gate 이식, 실제 Studio 저장·재열기 및 운영 main 활성화는 별도 단계다. 동일 PR이 종료되어 배포가 정리된 뒤 reopen하면 새 미리보기 수명으로 baseline을 다시 고정한다.
 
 공식 근거: [Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/), [CI 연동](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/), [삭제 API](https://developers.cloudflare.com/api/resources/pages/subresources/projects/subresources/deployments/methods/delete/).
+
+
+## Fork 게시 승인
+
+Lab Preview의 Run workflow에서 branch `main`, `pr` 번호, `approve_sha`에 현재 전체 40자리 head SHA를 입력한다. fork CI 실행 승인은 GitHub의 기존 정책을 따르며, 이 입력은 CI 승인을 대체하거나 실패 CI를 우회하지 않는다.
+
+actor와 재실행 triggering_actor 모두 현재 write/maintain/admin 권한이 있어야 한다. 승인은 PR 번호·fork 저장소 ID·SHA와 해당 실행에만 유효하다. 영구 승인 라벨/댓글을 사용하지 않으며, 새 push와 이후 수동 재게시에는 다시 명시한다. 직렬화 대기 중 취소된 승인 실행도 자동 승계하지 않는다.
+
+승인 없는 fork는 성공 CI 확인 후 게시 대기로 표시하고 기존 정상 고유 링크를 유지한다. 내부 PR/devel은 자동 게시한다. fork 고정 주소는 자동 이동 대신 외부 코드/민감 문서 주의 안내와 열기 링크를 표시한다. 이는 게시 통제이며 악성 코드 판정이나 외부 통신 차단 기능이 아니다.
+
+실제 별도 작성자 fork 시험은 아직 미완료다. SHA 변경·권한 회수·다른 PR/저장소·승인 누락은 로컬 계약 테스트로 확인했다.

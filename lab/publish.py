@@ -3,7 +3,10 @@ import base64, json, os, pathlib, re, subprocess
 from policy import select_run, validate_zip
 from hosting import Pages, meta, latest_pointers, branch as branch_name
 
+from approval import fork, grant, enforce
+
 HOST = None
+APPROVAL = None
 
 REPO = os.environ['GITHUB_REPOSITORY']
 ROOT = f'repos/{REPO}'
@@ -63,6 +66,17 @@ def comment(number, body):
         api(f'{ROOT}/issues/{number}/comments', {'body':body})
 
 
+def permission(actor):
+    if not re.fullmatch(r'[A-Za-z0-9-]+', actor):
+        raise ValueError('invalid approval actor')
+    return api(f'{ROOT}/collaborators/{actor}/permission')['permission']
+
+
+def approval_guard(number, sha):
+    if number:
+        enforce(pull(number), number, sha, APPROVAL, permission)
+
+
 def reconcile(number):
     sha = target_sha(number)
     evidence = []
@@ -85,6 +99,7 @@ def reconcile(number):
         if len(jobs) != 1 or jobs[0]['name'] != expected or jobs[0]['conclusion'] != 'success':
             raise ValueError('missing or skipped required job')
         evidence.append(run)
+    approval_guard(number, sha)
     ci = evidence[0]
     artifacts = pages(f"{ROOT}/actions/runs/{ci['id']}/artifacts", 'artifacts')
     found = [a for a in artifacts if a['name'] == f"static-{sha}-{ci['run_attempt']}" and not a['expired']]
@@ -96,6 +111,7 @@ def reconcile(number):
     if artifact.get('digest') != 'sha256:' + verified['sha256']:
         raise ValueError('GitHub artifact digest mismatch')
     def guard():
+        approval_guard(number, sha)
         if target_sha(number) != sha:
             raise ValueError('stale head before publish')
         for run in evidence:
@@ -104,6 +120,8 @@ def reconcile(number):
                 raise ValueError('CI attempt changed during validation')
     guard()
     result = {'target': f'pr-{number}' if number else 'devel', 'sha':sha, 'state':'verified-not-hosted', 'artifact_id':artifact['id'], 'runs':[{'id':r['id'],'attempt':r['run_attempt'],'url':r['html_url']} for r in evidence], **verified}
+    if number and fork(pull(number)):
+        result['approval'] = APPROVAL
     if HOST:
         baseline = None
         if number:
@@ -120,21 +138,22 @@ def reconcile(number):
             if not baseline:
                 raise ValueError('pinned PR base has no verified devel deployment')
         asset = HOST.asset(data, sha, verified)
-        pointer, url = HOST.pointer(result['target'], asset, baseline, guard)
+        pointer, url = HOST.pointer(result['target'], asset, baseline, guard, external=bool(number and fork(pull(number))))
         result.update(state='hosted', url=url, immutable_url=asset['url'], deployment_id=pointer['id'], asset_id=asset['id'])
         if baseline:
             result.update(base_sha=meta(baseline)['sha'], baseline_id=baseline['id'], baseline_url=baseline['url'])
         guard()
         if number:
             body = f"{MARKER}\n## PR 미리보기\n\n검증한 PR head: `{sha}`\n\n[PR head 열기]({url}) · [검증 버전 고유 링크]({asset['url']}) · [비교 기준 열기]({baseline['url']}) · [현재 devel 열기](https://{HOST.domain})\n\n비교 기준 SHA: `{meta(baseline)['sha']}` (이 미리보기 수명 동안 고정)\n\n[CI 산출물]({ci['html_url']}) · [수동 재검증](https://github.com/{REPO}/actions/workflows/preview.yml)\n\n<!-- verified-sha:{sha} -->"
+            if fork(pull(number)):
+                body += '\n\n외부 기여 코드 미리보기입니다. 민감한 문서를 열거나 로그인 정보를 입력하지 마세요. 게시 승인은 코드 안전성 보증이 아닙니다.'
             comment(number, body)
     return result
 
 
 def main():
-    global HOST
-    if os.environ.get('CLOUDFLARE_API_TOKEN'):
-        HOST = Pages()
+    global HOST, APPROVAL
+    APPROVAL = None
     event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     event_name = os.environ['GITHUB_EVENT_NAME']
     prefix = []
@@ -149,10 +168,18 @@ def main():
             raise ValueError('invalid PR number')
         if int(value):
             target_sha(int(value))
+        approved_sha = event.get('inputs', {}).get('approve_sha', '')
+        if approved_sha:
+            if not int(value):
+                raise ValueError('fork approval requires PR number')
+            APPROVAL = grant(pull(int(value)), int(value), approved_sha,
+                [os.environ.get('GITHUB_ACTOR', ''), os.environ.get('GITHUB_TRIGGERING_ACTOR', '')], permission)
     else:
         run = api(f"{ROOT}/actions/runs/{event['workflow_run']['id']}")
         if run['event'] not in ('pull_request', 'push'):
             return [{'state':'ignored-event'}]
+    if os.environ.get('CLOUDFLARE_API_TOKEN'):
+        HOST = Pages()
     # GitHub keeps at most one pending concurrency member. Any surviving event
     # must therefore reconcile every current request, including devel.
     requests = pages(f'{ROOT}/pulls?state=all&base=devel')
@@ -180,7 +207,7 @@ def main():
                         last = m['sha']
                         asset = HOST.api('/deployments/' + m['asset'])
                         preserved = f"\n\n[이전 정상 버전]({asset['url']}) · [현재 devel](https://{HOST.domain})"
-                body = f'{MARKER}\n## 미리보기 시험 — 게시 보류\n\n현재 head: `{target_sha(number)}`\n\n사유: {e}\n\n이전 검증 SHA: `{last}`. 현재 head의 성공 증거로 사용하지 않습니다.{preserved}'
+                body = f'{MARKER}\n## 미리보기 시험 — 게시 보류\n\n현재 head: `{target_sha(number)}`\n\n사유: {e}\n\n[게시 승인/재검증](https://github.com/{REPO}/actions/workflows/preview.yml): fork는 PR 번호와 현재 전체 SHA를 approve_sha에 입력해야 합니다.\n\n이전 검증 SHA: `{last}`. 현재 head의 성공 증거로 사용하지 않습니다.{preserved}'
                 if old:
                     body += f'\n\n<!-- verified-sha:{last} -->'
                 comment(number, body)

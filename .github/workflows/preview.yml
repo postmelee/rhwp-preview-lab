@@ -12,6 +12,10 @@ on:
         description: 'PR number to revalidate (0 for current devel)'
         required: true
         default: '0'
+      approve_sha:
+        description: 'Fork publish approval: exact current 40-character head SHA (one run only)'
+        required: false
+        default: ''
 permissions:
   contents: read
   actions: read

@@ -181,15 +181,19 @@ class Pages:
         metadata = {'kind': 'asset', 'sha': sha, 'digest': verified['sha256']}
         return self.deploy('assets', sha, metadata, files)
 
-    def pointer(self, target, asset, baseline, guard):
+    def pointer(self, target, asset, baseline, guard, external=False):
         m = meta(asset)
         value = {'kind': 'pointer', 'sha': m['sha'], 'asset': asset['id']}
+        if external:
+            value['external'] = True
         if baseline:
             value.update(baseline=baseline['id'], base_sha=meta(baseline)['sha'])
         url = self.url(asset['url'])
         files = {'index.html': ('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=' + url + '"><title>검증된 미리보기</title><a href="' + url + '">검증된 미리보기 열기</a>').encode(),
                  'preview.json': json.dumps(value, sort_keys=True).encode(),
                  '_headers': b'/*\n  Cache-Control: no-store\n  X-Robots-Tag: noindex\n'}
+        if external:
+            files['index.html'] = ('<!doctype html><meta charset="utf-8"><title>외부 기여 미리보기</title><h1>외부 기여 코드 미리보기</h1><p>이 PR의 코드는 검토 중입니다. 민감한 문서를 열거나 로그인 정보를 입력하지 마세요. 게시 승인은 코드 안전성 보증이 아닙니다.</p><p>SHA: ' + m['sha'] + '</p><a href="' + url + '" rel="noreferrer">이 버전 열기</a>').encode()
         guard()
         d = self.deploy(target, m['sha'], value, files)
         guard()
