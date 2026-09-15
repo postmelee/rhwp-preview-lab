@@ -110,7 +110,7 @@ class Pages:
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, *args, **kwargs):
                 return None
-        request = urllib.request.Request(self.url(url), headers={'Cache-Control': 'no-cache'})
+        request = urllib.request.Request(self.url(url), headers={'Cache-Control': 'no-cache', 'User-Agent': 'rhwp-preview-lab/2 (+https://github.com/postmelee/rhwp-preview-lab)'})
         with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
             return response.read(25 * 1024 * 1024 + 1), response.headers.get_content_type()
 
