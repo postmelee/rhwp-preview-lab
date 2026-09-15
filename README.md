@@ -24,7 +24,7 @@ actionlint
 
 ## 신뢰 경계와 미완료 항목
 
-PR 실행은 contents:read이며 credential을 checkout에 남기지 않는다. publisher에는 contents:read/actions:read/pull-requests:write만 있다. publisher는 PR 코드·artifact를 실행하지 않고 ZIP 경로·용량·정적 파일 목록을 검사한다. CI 및 Quality workflow가 기본 브랜치와 달라진 PR은 게시를 차단한다.
+PR 실행은 contents:read이며 credential을 checkout에 남기지 않는다. publisher에는 contents:read/actions:read/pull-requests:write만 있다. 대기 concurrency 이벤트가 합쳐져도 요청을 놓치지 않도록 매번 열린 PR 전부와 devel을 재조정한다. 이 방식은 소규모 시험용이며 운영 규모에서는 요청별 큐 설계가 필요하다. publisher는 PR 코드·artifact를 실행하지 않고 ZIP 경로·용량·정적 파일 목록을 검사한다. CI 및 Quality workflow가 기본 브랜치와 달라진 PR은 게시를 차단한다.
 
 정적 앱은 신뢰하지 않는 코드다. 실제 호스팅 시 운영 앱과 분리된 origin을 사용해야 한다. 최신 head 재조회와 코멘트 갱신 사이에는 GitHub 원자적 조건부 쓰기가 없으므로 표시 SHA를 명시하고 후속 이벤트로 조정한다. Cloudflare 별칭 교체·배포 정리·비교 기준 유지·fork 권한 검증은 별도 실제 실행 증거가 필요하다.
 

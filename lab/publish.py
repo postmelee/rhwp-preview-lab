@@ -111,26 +111,26 @@ def reconcile(number):
 def main():
     event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     event_name = os.environ['GITHUB_EVENT_NAME']
+    prefix = []
     if event_name == 'pull_request_target':
         number = event['pull_request']['number']
         if pull(number)['state'] == 'closed':
             comment(number, f'{MARKER}\n## 미리보기 시험 종료\n\nPR이 닫혔습니다. 실제 호스팅 자원은 생성하지 않았습니다.')
-        return [{'target':f'pr-{number}', 'state':'closed-event-reconciled'}]
-    if event_name == 'workflow_dispatch':
+        prefix.append({'target':f'pr-{number}', 'state':'closed-event-reconciled'})
+    elif event_name == 'workflow_dispatch':
         value = event.get('inputs', {}).get('pr', '0')
         if not re.fullmatch(r'\d{1,8}', value):
             raise ValueError('invalid PR number')
-        numbers = [int(value)]
+        if int(value):
+            target_sha(int(value))
     else:
         run = api(f"{ROOT}/actions/runs/{event['workflow_run']['id']}")
-        if run['event'] == 'push' and run['head_branch'] == 'devel':
-            numbers = [0]
-        elif run['event'] == 'pull_request':
-            # Reconcile all current requests, not untrusted artifact-supplied PR numbers.
-            numbers = [p['number'] for p in pages(f'{ROOT}/pulls?state=open&base=devel') if p['head']['sha'] == run['head_sha']]
-        else:
+        if run['event'] not in ('pull_request', 'push'):
             return [{'state':'ignored-event'}]
-    results = []
+    # GitHub keeps at most one pending concurrency member. Any surviving event
+    # must therefore reconcile every current request, including devel.
+    numbers = [0] + [p['number'] for p in pages(f'{ROOT}/pulls?state=open&base=devel')]
+    results = prefix
     for number in numbers:
         try:
             results.append(reconcile(number))
