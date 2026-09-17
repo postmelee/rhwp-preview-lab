@@ -1,10 +1,10 @@
 # devel 미리보기 운영
 
-Issue: [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8). 현재 상태: 구현 PR 검증 중, Pages 미활성화.
+Issue: [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8). 현재 상태: GitHub Pages 운영 중(2026-09-17 활성화). [실행 증적과 검증 범위](VALIDATION.md)를 참고한다.
 
 ## 사용
 
-예상 URL은 https://postmelee.github.io/rhwp-preview-lab/ 이다. 배너의 소스 SHA와 빌드 시각이 실제 실행 버전을 나타낸다. 최신 여부는 페이지를 열었을 때 공개 GitHub API로 조회한다. API 한도/네트워크 오류면 `최신 여부 확인 불가`를 표시한다. 갱신 상태 링크는 Actions의 실행·실패 로그를 연다. 최신 devel이라는 표시는 upstream의 전체 CI 또는 모든 기능이 통과했다는 뜻이 아니다.
+공개 URL은 https://postmelee.github.io/rhwp-preview-lab/ 이다. 배너의 소스 SHA와 빌드 시각이 실제 실행 버전을 나타낸다. 최신 여부는 페이지를 열었을 때 공개 GitHub API로 조회한다. API 한도/네트워크 오류면 `최신 여부 확인 불가`를 표시한다. 갱신 상태 링크는 Actions의 실행·실패 로그를 연다. 최신 devel이라는 표시는 upstream의 전체 CI 또는 모든 기능이 통과했다는 뜻이 아니다.
 
 수동 갱신: Actions → Devel Pages → Run workflow → main. `force=false`는 즉시 변경을 조회하며 동일 버전과 실패 재시도 간격을 존중한다. `force=true`는 현재 upstream devel을 다시 빌드한다. 진행 중 빌드가 있으면 기다린다. GitHub의 단일 대기 슬롯은 후속 예약 실행에 의해 교체될 수 있으므로, 수동 실행이 cancelled가 되었다면 진행 중 빌드 종료 후 다시 요청한다.
 
@@ -33,7 +33,7 @@ gh workflow disable devel-pages.yml -R postmelee/rhwp-preview-lab
 
 기존 사이트는 유지된다. 다시 활성화 후 수동 실행으로 복구한다. 이전 Cloudflare 실험 workflow/배포/Secret은 별개로 보존되어 있으므로 신규 서비스 중단이 이를 정리하지 않는다.
 
-## 최초 활성화
+## 최초 활성화·재설정 절차
 
 1. 구현 PR의 계약 테스트, 실제 release 빌드, Pages 하위 경로 브라우저 검증을 확인한다.
 2. 저장소 Settings → Pages → Source를 GitHub Actions로 설정한다.

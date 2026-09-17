@@ -1,11 +1,11 @@
 # rhwp devel 미리보기
 
-현재 개발 범위는 [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8)의 **독립 devel 미리보기**다. rhwp 저장소를 읽어 이 저장소의 runner에서 빌드하고 GitHub Pages로 제공한다. upstream CI/Secret 변경은 필요 없다.
+현재 운영 범위는 [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8)의 **독립 devel 미리보기**다. rhwp 저장소를 읽어 이 저장소의 runner에서 빌드하고 GitHub Pages로 제공한다. upstream CI/Secret 변경은 필요 없다.
 
-- [설계 계획](docs/devel-preview/PLAN.md) · [운영 안내](docs/devel-preview/OPERATIONS.md)
+- [설계 계획](docs/devel-preview/PLAN.md) · [운영 안내](docs/devel-preview/OPERATIONS.md) · [검증 보고](docs/devel-preview/VALIDATION.md)
 - 5분마다 변경 확인, SHA/빌드 레시피가 같으면 빌드 생략.
 - 실제 빌드는 직렬화하며 실패 시 이전 정상 사이트를 유지한다.
-- 예상 공개 주소: https://postmelee.github.io/rhwp-preview-lab/ (운영 활성화 전)
+- [최신 devel 미리보기 열기](https://postmelee.github.io/rhwp-preview-lab/)
 
 ## 이전 Cloudflare 실험 기록
 

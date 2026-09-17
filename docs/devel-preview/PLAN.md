@@ -3,7 +3,7 @@
 - Issue: https://github.com/postmelee/rhwp-preview-lab/issues/8
 - Date: 2026-09-17
 - Baseline: lab main ed1447466498cc7807b25b1e0af4c56b00cb78b4
-- Status: implementation pending
+- Status: implemented; evidence in [VALIDATION.md](VALIDATION.md)
 
 ## 목적과 경계
 

@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:42219/rhwp-preview-lab/",
+  "requests": [
+    {
+      "url": "/rhwp-preview-lab/?renderer=canvaskit",
+      "status": 200,
+      "mime": "text/html"
+    },
+    {
+      "url": "/rhwp-preview-lab/assets/index-zNgAI5lm.css",
+      "status": 200,
+      "mime": "text/css"
+    },
+    {
+      "url": "/rhwp-preview-lab/locale-init.js",
+      "status": 200,
+      "mime": "application/javascript"
+    },
+    {
+      "url": "/rhwp-preview-lab/preview-status.js",
+      "status": 200,
+      "mime": "application/javascript"
+    },
+    {
+      "url": "/rhwp-preview-lab/theme-init.js",
+      "status": 200,
+      "mime": "application/javascript"
+    },
+    {
+      "url": "/rhwp-preview-lab/assets/index-DIRY1B8J.js",
+      "status": 200,
+      "mime": "application/javascript"
+    },
+    {
+      "url": "/rhwp-preview-lab/images/icon_small_ko.svg",
+      "status": 200,
+      "mime": "image/svg+xml"
+    },
+    {
+      "url": "/rhwp-preview-lab/assets/rhwp_bg-Bd6TJ1TC.wasm",
+      "status": 200,
+      "mime": "application/wasm"
+    },
+    {
+      "url": "/rhwp-preview-lab/favicon.ico",
+      "status": 200,
+      "mime": "application/octet-stream"
+    },
+    {
+      "url": "/rhwp-preview-lab/assets/canvaskit-renderer-BVgN4ZK-.js",
+      "status": 200,
+      "mime": "application/javascript"
+    },
+    {
+      "url": "/rhwp-preview-lab/assets/canvaskit-SCAxUyCS.wasm",
+      "status": 200,
+      "mime": "application/wasm"
+    },
+    {
+      "url": "/rhwp-preview-lab/fonts/NotoSansKR-Regular.woff2",
+      "status": 200,
+      "mime": "font/woff2"
+    },
+    {
+      "url": "/rhwp-preview-lab/fonts/D2Coding-Regular.woff2",
+      "status": 200,
+      "mime": "font/woff2"
+    },
+    {
+      "url": "/rhwp-preview-lab/fonts/SourceHanSerifK-OldHangul-subset.woff2",
+      "status": 200,
+      "mime": "font/woff2"
+    }
+  ],
+  "errors": [],
+  "console": [],
+  "roundtrip": {
+    "firstBytes": 7364,
+    "secondBytes": 7364,
+    "text": "devel Pages HWPX roundtrip",
+    "verification": "UI save -> HWPX XML text -> file input open -> UI save -> HWPX XML text"
+  },
+  "metadata": {
+    "sha": "236a601da803b53429e9090eef652c661dd3bfe2",
+    "recipe": "67291c44ca423de74d49f23bc7fd14a8047be2cea55036f08fe1bd90863783f6",
+    "profile": "release",
+    "pwa": false,
+    "run_id": "35228955360",
+    "attempt": "1",
+    "built_at": "2026-09-17T13:54:08.884443+00:00",
+    "base": "/rhwp-preview-lab/"
+  },
+  "layout": {
+    "appBottom": 976,
+    "bannerTop": 976
+  },
+  "passed": true,
+  "visibleText": "rhwp-studio 문서 편집기\n파일\n편집\n보기\n입력\n서식\n쪽\n표\n도구\n오려\n두기\n복사\n하기\n붙이기\n모양\n복사\n조판\n부호\n문단\n부호\n격자\n보기\n글자\n모양\n문단\n모양\n1.\n문단\n번호\n●\n글머리\n표\n⇤\n수준▲\n⇥\n수준▼\n표 ▾\n도형 ▾\n그림\n개체\n속성\n문자표\n하이퍼\n링크\n머리말\n꼬리말\n각주\n미주\n찾기\n▾\n⧉\n이력\n관리\n≍\n문서\n비교\n바탕글\n본문\n개요 1\n개요 2\n개요 3\n개요 4\n개요 5\n개요 6\n개요 7\n개요 8\n개요 9\n개요 10\n쪽 번호\n머리말\n각주\n미주\n메모\n차례 제목\n차례 1\n차례 2\n차례 3\n캡션\n대표\n한글\n영문\n한자\n일어\n외국어\n기호\n사용자\n◆ 함초롬\n◆ 함초롬돋움\n◆ 맑은 고딕\n◆ 바탕\n함초롬바탕\n함초롬돋움\n맑은 고딕\n나눔고딕\n바탕\n돋움\n궁서\npt\n▲\n▼\n100 %\n130 %\n160 %\n180 %\n200 %\n300 %\n▲\n▼\n가\n가\n간\n가\n가\n▾\n가\n▾\n✏\n▾\n1 / 1 쪽\n구역: 1 / 1\n삽입\nroundtrip-reopened.hwpx — 1페이지 (192.9ms)\n100%\ndevel 236a601da803 · 2026-09-17T13:54:08.884443+00:00 · 조회 시점 최신 devel · 갱신 상태·실패 로그"
+}

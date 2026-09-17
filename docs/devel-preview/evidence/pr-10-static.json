@@ -1,0 +1,9 @@
+{
+  "files": 59,
+  "bytes": 45241761,
+  "wasm": [
+    "assets/rhwp_bg-Bd6TJ1TC.wasm",
+    "assets/canvaskit-SCAxUyCS.wasm"
+  ],
+  "source_sha": "236a601da803b53429e9090eef652c661dd3bfe2"
+}

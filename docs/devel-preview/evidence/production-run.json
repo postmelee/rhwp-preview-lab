@@ -1,0 +1,36 @@
+{
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "gate",
+      "conclusion": "success",
+      "startedAt": "2026-09-17T13:56:10Z",
+      "completedAt": "2026-09-17T13:56:19Z"
+    },
+    {
+      "name": "check",
+      "conclusion": "skipped",
+      "startedAt": "2026-09-17T13:56:08Z",
+      "completedAt": "2026-09-17T13:56:07Z"
+    },
+    {
+      "name": "build",
+      "conclusion": "success",
+      "startedAt": "2026-09-17T13:56:21Z",
+      "completedAt": "2026-09-17T14:06:23Z"
+    },
+    {
+      "name": "publish",
+      "conclusion": "success",
+      "startedAt": "2026-09-17T14:06:27Z",
+      "completedAt": "2026-09-17T14:06:40Z"
+    },
+    {
+      "name": "finish",
+      "conclusion": "success",
+      "startedAt": "2026-09-17T14:06:42Z",
+      "completedAt": "2026-09-17T14:06:47Z"
+    }
+  ]
+}
