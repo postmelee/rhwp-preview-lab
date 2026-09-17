@@ -53,7 +53,10 @@ def stamp(source, sha):
     html = index.read_text()
     if '</body>' not in html:
         raise ValueError('missing HTML body')
-    banner = f'''<aside id="devel-preview-status" data-source-sha="{sha}" aria-label="Preview build" style="position:fixed;bottom:0;right:0;z-index:2147483647;background:#132235;color:white;font:11px monospace;padding:5px;max-width:90vw">
+    banner = f'''<style>
+#studio-root {{height:calc(100vh - 24px)!important}}
+#devel-preview-status {{box-sizing:border-box;height:24px;width:100%;overflow-x:auto;white-space:nowrap}}
+</style><aside id="devel-preview-status" data-source-sha="{sha}" aria-label="Preview build" style="position:fixed;bottom:0;right:0;z-index:2147483647;background:#132235;color:white;font:11px monospace;padding:5px">
 <a style="color:#bde0ff" href="https://github.com/edwardkim/rhwp/commit/{sha}" target="_blank" rel="noopener">devel {sha[:12]}</a> · {metadata['built_at']}
 · <span id="preview-freshness">최신 여부 확인 중</span>
 · <a style="color:#bde0ff" href="https://github.com/postmelee/rhwp-preview-lab/actions/workflows/devel-pages.yml" target="_blank" rel="noopener">갱신 상태·실패 로그</a></aside>

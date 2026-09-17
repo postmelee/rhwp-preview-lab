@@ -83,6 +83,13 @@ try {
   evidence.roundtrip = {firstBytes: first.bytes, secondBytes: second.bytes, text: marker,
     verification: 'UI save -> HWPX XML text -> file input open -> UI save -> HWPX XML text'};
   evidence.metadata = JSON.parse(await readFile(resolve(dist, 'build.json'), 'utf8'));
+  const layout = await page.evaluate(() => ({
+    appBottom: document.getElementById('studio-root').getBoundingClientRect().bottom,
+    bannerTop: document.getElementById('devel-preview-status').getBoundingClientRect().top,
+  }));
+  assert(layout.appBottom <= layout.bannerTop, 'preview status must not cover Studio controls');
+  evidence.layout = layout;
+
   await page.screenshot({path: 'smoke-evidence/studio.png'});
   const failures = evidence.requests.filter(r => r.status >= 400 && !r.url.endsWith('favicon.ico'));
   assert.deepEqual(failures, [], 'local static requests must succeed under the project base');
