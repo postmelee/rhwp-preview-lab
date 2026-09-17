@@ -78,10 +78,50 @@ class DecisionTests(unittest.TestCase):
         output.assert_called_once_with({'build': False})
 
     def test_site_error_does_not_create_record(self):
-        with patch.object(control, 'current_harness', return_value=True), patch.object(control, 'api', return_value={'sha': SHA}) as api, patch.object(control, 'request', side_effect=TimeoutError), patch.dict(os.environ, {'GITHUB_RUN_ID': '1'}):
+        with patch.object(control, 'current_harness', return_value=True), patch.object(control, 'api', return_value={'object': {'sha': SHA}}) as api, patch.object(control, 'request', side_effect=TimeoutError), patch.dict(os.environ, {'GITHUB_RUN_ID': '1'}):
             with self.assertRaises(TimeoutError):
                 control.gate()
         self.assertEqual(api.call_count, 1)
+
+
+class ControllerFlowTests(unittest.TestCase):
+    def setUp(self):
+        self.env = patch.dict(os.environ, {'GITHUB_SHA': 'c' * 40, 'GITHUB_RUN_ID': '10',
+                                          'GITHUB_RUN_ATTEMPT': '2', 'FORCE': 'false'})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
+    def test_no_change_creates_no_deployment(self):
+        with patch.object(control, 'current_harness', return_value=True), patch.object(control, 'recipe', return_value=KEY), patch.object(control, 'request', return_value={'sha': SHA, 'recipe': KEY}), patch.object(control, 'api', side_effect=[{'object': {'sha': SHA}}, []]) as api, patch.object(control, 'output') as output, patch.object(control, 'summary'):
+            control.gate()
+        self.assertEqual(api.call_count, 2)
+        output.assert_called_once_with({'build': False, 'sha': SHA, 'recipe': KEY})
+
+    def test_changed_source_records_exact_run_before_build(self):
+        with patch.object(control, 'current_harness', return_value=True), patch.object(control, 'recipe', return_value=KEY), patch.object(control, 'request', return_value=None), patch.object(control, 'api', side_effect=[{'object': {'sha': SHA}}, [], {'id': 42}, {}]) as api, patch.object(control, 'output') as output, patch.object(control, 'summary'):
+            control.gate()
+        body = api.call_args_list[2].args[1]
+        self.assertFalse(body['auto_merge'])
+        self.assertEqual(body['required_contexts'], [])
+        self.assertEqual(body['payload'], {'source_sha': SHA, 'recipe': KEY, 'run_id': '10', 'attempt': '2'})
+        output.assert_called_once_with({'build': True, 'sha': SHA, 'recipe': KEY, 'deployment': 42})
+        self.assertEqual(api.call_args_list[3].args[1]['state'], 'in_progress')
+
+    def test_finalizer_rejects_another_run(self):
+        record = {'environment': control.ENVIRONMENT,
+                  'payload': {'source_sha': SHA, 'recipe': KEY, 'run_id': '11', 'attempt': '2'}}
+        with patch.dict(os.environ, {'SOURCE_SHA': SHA, 'RECIPE': KEY, 'DEPLOYMENT_ID': '42', 'PUBLISH_RESULT': 'success'}), patch.object(control, 'api', return_value=record) as api:
+            with self.assertRaises(ValueError):
+                control.finish()
+        self.assertEqual(api.call_count, 1)
+
+    def test_failed_or_skipped_publication_is_not_success(self):
+        record = {'environment': control.ENVIRONMENT,
+                  'payload': {'source_sha': SHA, 'recipe': KEY, 'run_id': '10', 'attempt': '2'}}
+        for result in ('failure', 'skipped', 'cancelled', 'success'):
+            with self.subTest(result=result), patch.dict(os.environ, {'SOURCE_SHA': SHA, 'RECIPE': KEY, 'DEPLOYMENT_ID': '42', 'PUBLISH_RESULT': result}), patch.object(control, 'api', return_value=record), patch.object(control, 'set_status') as status:
+                control.finish()
+                self.assertEqual(status.call_args.args[1], 'success' if result == 'success' else 'failure')
 
 
 class StaticTests(unittest.TestCase):

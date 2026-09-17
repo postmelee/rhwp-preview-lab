@@ -94,7 +94,7 @@ def summary(message):
 
 
 def current_harness():
-    return api(f'repos/{REPO}/commits/main')['sha'] == os.environ['GITHUB_SHA']
+    return api(f'repos/{REPO}/git/ref/heads/main')['object']['sha'] == os.environ['GITHUB_SHA']
 
 
 def gate():
@@ -102,7 +102,7 @@ def gate():
         output({'build': False})
         summary('Skipped: workflow revision is no longer current main.')
         return
-    sha = valid_sha(api(f'repos/{UPSTREAM}/commits/devel')['sha'])
+    sha = valid_sha(api(f'repos/{UPSTREAM}/git/ref/heads/devel')['object']['sha'])
     key = recipe()
     # Do not send the GitHub token to the public Pages host.
     published = request(SITE + 'build.json?poll=' + os.environ['GITHUB_RUN_ID'], missing=True)
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     if command == 'gate':
         gate()
     elif command == 'resolve':
-        output({'sha': valid_sha(api(f'repos/{UPSTREAM}/commits/devel')['sha']), 'recipe': recipe()})
+        output({'sha': valid_sha(api(f'repos/{UPSTREAM}/git/ref/heads/devel')['object']['sha']), 'recipe': recipe()})
     elif command == 'guard':
         if not current_harness():
             raise SystemExit('Refusing publication from an obsolete workflow revision')

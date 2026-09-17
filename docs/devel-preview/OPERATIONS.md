@@ -6,7 +6,7 @@ Issue: [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8). 현재 상�
 
 예상 URL은 https://postmelee.github.io/rhwp-preview-lab/ 이다. 배너의 소스 SHA와 빌드 시각이 실제 실행 버전을 나타낸다. 최신 여부는 페이지를 열었을 때 공개 GitHub API로 조회한다. API 한도/네트워크 오류면 `최신 여부 확인 불가`를 표시한다. 갱신 상태 링크는 Actions의 실행·실패 로그를 연다. 최신 devel이라는 표시는 upstream의 전체 CI 또는 모든 기능이 통과했다는 뜻이 아니다.
 
-수동 갱신: Actions → Devel Pages → Run workflow → main. `force=false`는 즉시 변경을 조회하며 동일 버전과 실패 재시도 간격을 존중한다. `force=true`는 현재 upstream devel을 다시 빌드한다. 진행 중 빌드가 있으면 기다린다.
+수동 갱신: Actions → Devel Pages → Run workflow → main. `force=false`는 즉시 변경을 조회하며 동일 버전과 실패 재시도 간격을 존중한다. `force=true`는 현재 upstream devel을 다시 빌드한다. 진행 중 빌드가 있으면 기다린다. GitHub의 단일 대기 슬롯은 후속 예약 실행에 의해 교체될 수 있으므로, 수동 실행이 cancelled가 되었다면 진행 중 빌드 종료 후 다시 요청한다.
 
 ## 비용·사용량
 
