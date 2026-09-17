@@ -25,7 +25,7 @@ def recipe():
     return digest.hexdigest()
 
 
-def request(url, body=None, token=None, missing=False):
+def request(url, body=None, token=None, missing=False, method=None):
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'rhwp-devel-preview'}
     if token:
         headers['Authorization'] = f'Bearer {token}'
@@ -33,19 +33,19 @@ def request(url, body=None, token=None, missing=False):
     if data is not None:
         headers['Content-Type'] = 'application/json'
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, data, headers), timeout=25) as response:
+        with urllib.request.urlopen(urllib.request.Request(url, data, headers, method=method), timeout=25) as response:
             raw = response.read(2 * 1024 * 1024 + 1)
             if len(raw) > 2 * 1024 * 1024:
                 raise ValueError('response exceeds controller limit')
-            return json.loads(raw)
+            return json.loads(raw) if raw else None
     except urllib.error.HTTPError as error:
         if missing and error.code == 404:
             return None
         raise
 
 
-def api(path, body=None):
-    return request('https://api.github.com/' + path, body, os.environ['GH_TOKEN'])
+def api(path, body=None, method=None):
+    return request('https://api.github.com/' + path, body, os.environ['GH_TOKEN'], method=method)
 
 
 def valid_sha(sha):
@@ -139,6 +139,17 @@ def set_status(deployment, state, description):
         'environment_url': SITE})
 
 
+def cleanup_pages_artifact():
+    run_id = os.environ['GITHUB_RUN_ID']
+    artifacts = api(f'repos/{REPO}/actions/runs/{run_id}/artifacts?per_page=100')['artifacts']
+    for artifact in artifacts:
+        if artifact['name'] == 'github-pages' and not artifact['expired']:
+            artifact_id = artifact['id']
+            if not str(artifact_id).isdigit():
+                raise ValueError('invalid artifact id')
+            api(f'repos/{REPO}/actions/artifacts/{artifact_id}', method='DELETE')
+
+
 def finish():
     deployment = os.environ['DEPLOYMENT_ID']
     expected = (os.environ['SOURCE_SHA'], os.environ['RECIPE'], os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT'])
@@ -152,6 +163,7 @@ def finish():
     success = os.environ.get('PUBLISH_RESULT') == 'success'
     set_status(deployment, 'success' if success else 'failure',
                'Pages deployment verified' if success else 'Attempt failed or was cancelled; inspect published SHA and logs')
+    cleanup_pages_artifact()
 
 
 if __name__ == '__main__':

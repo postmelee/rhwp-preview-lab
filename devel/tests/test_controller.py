@@ -120,9 +120,22 @@ class ControllerFlowTests(unittest.TestCase):
         record = {'environment': control.ENVIRONMENT,
                   'payload': {'source_sha': SHA, 'recipe': KEY, 'run_id': '10', 'attempt': '2'}}
         for result in ('failure', 'skipped', 'cancelled', 'success'):
-            with self.subTest(result=result), patch.dict(os.environ, {'SOURCE_SHA': SHA, 'RECIPE': KEY, 'DEPLOYMENT_ID': '42', 'PUBLISH_RESULT': result}), patch.object(control, 'api', return_value=record), patch.object(control, 'set_status') as status:
+            with self.subTest(result=result), patch.dict(os.environ, {'SOURCE_SHA': SHA, 'RECIPE': KEY, 'DEPLOYMENT_ID': '42', 'PUBLISH_RESULT': result}), patch.object(control, 'api', return_value=record), patch.object(control, 'set_status') as status, patch.object(control, 'cleanup_pages_artifact'):
                 control.finish()
                 self.assertEqual(status.call_args.args[1], 'success' if result == 'success' else 'failure')
+
+
+class CleanupTests(unittest.TestCase):
+    def test_only_current_run_pages_artifact_is_deleted(self):
+        listing = {'artifacts': [{'id': 1, 'name': 'github-pages', 'expired': False},
+                                {'id': 2, 'name': 'devel-evidence-1', 'expired': False},
+                                {'id': 3, 'name': 'github-pages', 'expired': True}]}
+        with patch.dict(os.environ, {'GITHUB_RUN_ID': '10'}), patch.object(control, 'api', side_effect=[listing, None]) as api:
+            control.cleanup_pages_artifact()
+        self.assertIn('/runs/10/artifacts?', api.call_args_list[0].args[0])
+        self.assertEqual(api.call_args_list[1].args[0], 'repos/postmelee/rhwp-preview-lab/actions/artifacts/1')
+        self.assertEqual(api.call_args_list[1].kwargs, {'method': 'DELETE'})
+        self.assertEqual(api.call_count, 2)
 
 
 class PrepareTests(unittest.TestCase):

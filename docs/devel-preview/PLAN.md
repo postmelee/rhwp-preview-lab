@@ -17,7 +17,7 @@ edwardkim/rhwp의 devel을 읽어 이 저장소의 GitHub-hosted runner에서 re
 4. 변경 시 GitHub deployment payload에 upstream SHA/recipe/run을 기록한다. 실패·중단은 1시간 재시도 간격을 적용한다. 완료 상태를 못 남긴 pending 기록도 1시간 lease 후 복구한다. 수동 force는 이 간격과 동일 SHA 생략을 우회한다. 5분 poll마다 Git 커밋이나 artifact를 만들지 않는다.
 5. 읽기 권한의 별도 build job에서 upstream 정확한 SHA를 checkout한다. credential을 남기지 않으며 Pages/OIDC/Cloudflare Secret을 전달하지 않는다. cache-mode none, Node 자동 cache 비활성화, 초기 버전은 캐시 없음. 기존 검증 toolchain(Node 24.15.0, Rust 1.93.1, wasm-pack 0.15.0)을 사용한다.
 6. 기존 preview prepare의 sample 제외와 폰트 복사 방식을 참고한 독립 Pages adapter를 만든다. Vite base는 `/rhwp-preview-lab/`. PWA와 불필요한 OCX 플러그인은 끈다. 엔진 소스의 임의 문자열 치환 없이 공식 Vite base 경로를 우선하며 실제 브라우저 요청으로 확인한다.
-7. 빌드 job에서 파일 수/크기/심볼릭 링크/정적 파일/provenance를 검증하고 Pages artifact를 업로드한다(1일 보관). publish job은 upstream 코드를 실행하지 않고 검증된 artifact만 게시한다. 게시 직전 lab main과 workflow SHA를 비교하여 오래된 harness rerun을 막는다.
+7. 빌드 job에서 파일 수/크기/심볼릭 링크/정적 파일/provenance를 검증하고 Pages artifact를 업로드한다(PR/정리 실패 시 1일 보관, 운영 처리 후 현재 run의 Pages artifact만 삭제). publish job은 upstream 코드를 실행하지 않고 검증된 artifact만 게시한다. 게시 직전 lab main과 workflow SHA를 비교하여 오래된 harness rerun을 막는다.
 8. 실패 시 이전 정상 Pages 배포를 유지한다. 페이지 배너에는 실제 source SHA, 빌드 시각, upstream 및 Actions 상태 링크를 넣는다. 최신 upstream SHA 조회 실패는 최신이라고 단정하지 않는다. 매 poll을 위해 전체 정적 사이트를 재배포하지 않는다.
 9. main만 게시 가능하다. PR에서는 읽기 권한의 테스트 및 실제 최신 devel 빌드를 수행하여 경로/산출물을 검증한다. Pages 설정과 운영 활성화는 검증된 PR을 기준으로 진행한다.
 

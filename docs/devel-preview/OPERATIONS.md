@@ -12,7 +12,7 @@ Issue: [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8). 현재 상�
 
 - 공개 저장소의 표준 Linux GitHub-hosted runner를 쓴다. 유료 larger runner나 Cloudflare API는 사용하지 않는다.
 - 예약 목표는 매시 2,7,…,57분이다. 하루 288회/30일 8,640회 조회지만 빌드와 배포는 변경 또는 재시도 시에만 한다.
-- SHA가 같으면 작은 Python gate job만 실행한다. 빌드 artifact는 1일, 브라우저 검증 증적은 3일 보관한다. 캐시는 초기 버전에서 사용하지 않는다.
+- SHA가 같으면 작은 Python gate job만 실행한다. 운영 Pages artifact는 처리 종료 후 현재 run의 해당 artifact만 삭제한다. PR artifact와 정리 실패 시 남은 artifact는 1일, 브라우저 검증 증적은 3일 보관한다. 캐시는 초기 버전에서 사용하지 않는다.
 - 동일 SHA 실패는 한 시간 후 재시도한다. 새 SHA와 수동 force는 즉시 시도할 수 있다.
 - 실제 갱신 시간은 예약 지연 + runner 대기 + release 빌드 + 배포 시간이다. GitHub schedule은 정확한 5분 SLA가 아니며, 공개 저장소에 60일 동안 활동이 없으면 비활성화될 수 있다.
 - Pages 및 artifact 저장량은 GitHub 정책을 따른다. 정적 산출물은 100MiB로 제한하며, 사용자 파일은 사이트 배포물에 넣지 않는다.
