@@ -105,7 +105,12 @@ jobs:
           npm --prefix rhwp-studio run build -- --config vite.devel.config.ts
           python3 ../harness/devel/site.py stamp . "$SOURCE_SHA"
           python3 ../harness/devel/site.py validate rhwp-studio/dist "$SOURCE_SHA" > ../static-validation.json
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
+        with:
+          path: source/rhwp-studio/dist
+          retention-days: 1
       - name: Browser smoke at the Pages subpath
+        timeout-minutes: 4
         run: node harness/devel/smoke.mjs source
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
@@ -116,10 +121,6 @@ jobs:
             smoke-evidence/
           retention-days: 3
           if-no-files-found: ignore
-      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
-        with:
-          path: source/rhwp-studio/dist
-          retention-days: 1
   publish:
     needs: [gate, build]
     if: >-

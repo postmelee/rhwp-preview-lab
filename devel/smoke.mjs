@@ -1,5 +1,6 @@
 // Exercise the built release app at the actual project subpath, never Vite dev mode.
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
 import {createServer} from 'node:http';
 import {createRequire} from 'node:module';
 import {readFile, mkdir, writeFile, stat} from 'node:fs/promises';
@@ -25,57 +26,62 @@ const server = createServer(async (req, res) => {
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('smoke-evidence', {recursive: true});
-const evidence = {url: origin + base, requests: [], errors: [], roundtrip: null};
+const evidence = {url: origin + base, requests: [], errors: [], console: [], roundtrip: null};
 let browser;
+let page;
 try {
   browser = await puppeteer.launch({executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
     headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']});
-  const page = await browser.newPage();
+  page = await browser.newPage();
   await page.setViewport({width: 1400, height: 1000});
   page.on('pageerror', e => evidence.errors.push(String(e)));
+  page.on('console', msg => { if (['error', 'warn'].includes(msg.type())) evidence.console.push(msg.text()); });
   page.on('response', r => {
     if (r.url().startsWith(origin)) evidence.requests.push({url: r.url().slice(origin.length), status: r.status(), mime: r.headers()['content-type']});
   });
   await page.evaluateOnNewDocument(() => {
     localStorage.setItem('rhwp-settings', JSON.stringify({version: 1, theme: {mode: 'system', skin: 'default', skinChosen: true}}));
   });
-  await page.goto(origin + base, {waitUntil: 'networkidle0', timeout: 90000});
-  await page.waitForFunction(() => !!window.__wasm && !!window.__canvasView && !!window.rhwpStudio?.automation, {timeout: 60000});
-  const canvas = await page.waitForSelector('canvas.page-canvas, .page-wrapper canvas', {timeout: 15000});
+  await page.goto(origin + base + '?renderer=canvaskit', {waitUntil: 'networkidle0', timeout: 90000});
+  await page.waitForFunction(() => window.rhwpStudio?.automation?.getContext().hasDocument, {timeout: 60000});
+  const canvas = await page.waitForSelector('#scroll-container canvas', {timeout: 15000});
   const bounds = await canvas.boundingBox();
   await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + 100);
   const marker = 'devel Pages HWPX roundtrip';
   await page.keyboard.type(marker, {delay: 25});
-  await page.waitForFunction(text => window.__wasm.getTextRange(0, 0, 0, 1000).includes(text), {}, marker);
-  // Capture bytes at the browser's save boundary; use the real Studio save command.
-  await page.evaluate(() => {
-    window.showSaveFilePicker = async () => ({name: 'devel-preview.hwpx', createWritable: async () => ({
-      write: async blob => {window.__previewSaved = Array.from(new Uint8Array(await blob.arrayBuffer()));},
-      close: async () => {},
-    })});
-    const result = window.rhwpStudio.automation.execute('file:save-as-hwpx', undefined, {allowDialog: true});
-    if (!result.ok) throw new Error(JSON.stringify(result));
-  });
-  await page.waitForSelector('.dialog-body input[type="text"]', {timeout: 10000});
-  await page.click('.dialog-footer .dialog-btn-primary');
-  await page.waitForFunction(() => window.__previewSaved?.length > 0, {timeout: 30000});
-  const bytes = await page.evaluate(() => window.__previewSaved);
-  assert.equal(bytes[0], 0x50); assert.equal(bytes[1], 0x4b);
-  await writeFile('smoke-evidence/roundtrip.hwpx', Buffer.from(bytes));
-  const reopened = await page.evaluate(async () => {
-    const requestId = 'devel-pages-smoke';
-    const done = new Promise(resolve => {
-      const off = window.__eventBus.on('open-document-bytes:done', payload => {
-        if (payload.requestId === requestId) {off(); resolve(payload);}
-      });
-    });
-    window.__eventBus.emit('open-document-bytes', {bytes: new Uint8Array(window.__previewSaved),
-      fileName: 'devel-preview.hwpx', fileHandle: null, skipUnsavedGuard: true, requestId});
-    return done;
-  });
-  assert.equal(reopened.ok, true, JSON.stringify(reopened));
-  await page.waitForFunction(text => window.__wasm.getTextRange(0, 0, 0, 1000).includes(text), {}, marker);
-  evidence.roundtrip = {savedBytes: bytes.length, reopened, text: marker};
+  await page.waitForFunction(() => window.rhwpStudio.automation.getContext().canUndo);
+  async function saveAsHwpx(filename) {
+    // The real save command writes to a test file-picker sink; no dev globals.
+    await page.evaluate(name => {
+      window.__previewSaved = null;
+      window.showSaveFilePicker = async () => ({name, createWritable: async () => ({
+        write: async blob => {window.__previewSaved = Array.from(new Uint8Array(await blob.arrayBuffer()));},
+        close: async () => {},
+      })});
+      const result = window.rhwpStudio.automation.execute('file:save-as-hwpx', undefined, {allowDialog: true});
+      if (!result.ok) throw new Error(JSON.stringify(result));
+    }, filename);
+    await page.waitForSelector('.dialog-body input[type="text"]', {timeout: 10000});
+    await page.click('.dialog-footer .dialog-btn-primary');
+    await page.waitForFunction(() => window.__previewSaved?.length > 0, {timeout: 30000});
+    const bytes = await page.evaluate(() => window.__previewSaved);
+    assert.equal(bytes[0], 0x50); assert.equal(bytes[1], 0x4b);
+    const path = resolve('smoke-evidence', filename);
+    await writeFile(path, Buffer.from(bytes));
+    execFileSync('python3', ['-c',
+      'import sys,zipfile,xml.etree.ElementTree as E; z=zipfile.ZipFile(sys.argv[1]); text="".join("".join(E.fromstring(z.read(n)).itertext()) for n in z.namelist() if n.startswith("Contents/section") and n.endswith(".xml")); assert sys.argv[2] in text,repr(text)',
+      path, marker]);
+    return {path, bytes: bytes.length};
+  }
+  const first = await saveAsHwpx('roundtrip-original.hwpx');
+  // Use a different file name so the title proves the normal file-open path completed.
+  const reopenedPath = resolve('smoke-evidence/roundtrip-reopened.hwpx');
+  await writeFile(reopenedPath, await readFile(first.path));
+  await (await page.$('#file-input')).uploadFile(reopenedPath);
+  await page.waitForFunction(() => document.title.includes('roundtrip-reopened.hwpx'), {timeout: 30000});
+  const second = await saveAsHwpx('roundtrip-second.hwpx');
+  evidence.roundtrip = {firstBytes: first.bytes, secondBytes: second.bytes, text: marker,
+    verification: 'UI save -> HWPX XML text -> file input open -> UI save -> HWPX XML text'};
   evidence.metadata = JSON.parse(await readFile(resolve(dist, 'build.json'), 'utf8'));
   await page.screenshot({path: 'smoke-evidence/studio.png'});
   const failures = evidence.requests.filter(r => r.status >= 400 && !r.url.endsWith('favicon.ico'));
@@ -86,6 +92,10 @@ try {
   assert.deepEqual(evidence.errors, [], 'unhandled browser exceptions');
   evidence.passed = true;
 } finally {
+  if (page) {
+    await page.screenshot({path: 'smoke-evidence/studio.png'}).catch(() => {});
+    evidence.visibleText = await page.evaluate(() => document.body.innerText).catch(() => 'unavailable');
+  }
   await writeFile('smoke-evidence/result.json', JSON.stringify(evidence, null, 2));
   await browser?.close();
   server.close();
