@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -122,6 +123,36 @@ class ControllerFlowTests(unittest.TestCase):
             with self.subTest(result=result), patch.dict(os.environ, {'SOURCE_SHA': SHA, 'RECIPE': KEY, 'DEPLOYMENT_ID': '42', 'PUBLISH_RESULT': result}), patch.object(control, 'api', return_value=record), patch.object(control, 'set_status') as status:
                 control.finish()
                 self.assertEqual(status.call_args.args[1], 'success' if result == 'success' else 'failure')
+
+
+class PrepareTests(unittest.TestCase):
+    def test_project_base_and_only_distributable_fonts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(['git', 'init', '-q', directory], check=True)
+            subprocess.run(['git', '-C', directory, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-q', '--allow-empty', '-m', 'fixture'], check=True)
+            sha = subprocess.check_output(['git', '-C', directory, 'rev-parse', 'HEAD'], text=True).strip()
+            public = root / 'rhwp-studio/public'
+            public.mkdir(parents=True)
+            fonts = root / 'assets/fonts'
+            fonts.mkdir(parents=True)
+            (fonts / 'font.woff2').write_bytes(b'font')
+            (public / 'fonts').symlink_to(fonts, target_is_directory=True)
+            (public / 'samples').mkdir()
+            (public / 'samples/private.hwp').write_bytes(b'private')
+            (public / 'outside.txt').symlink_to('/etc/passwd')
+            site.prepare(root, sha)
+            prepared = root / 'rhwp-studio/.devel-public'
+            self.assertEqual((prepared / 'fonts/font.woff2').read_bytes(), b'font')
+            self.assertFalse((prepared / 'samples').exists())
+            self.assertFalse((prepared / 'outside.txt').exists())
+            self.assertIn("base:'/rhwp-preview-lab/'", (root / 'rhwp-studio/vite.devel.config.ts').read_text())
+
+    def test_wrong_checkout_rejected_before_writing(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(site.subprocess, 'check_output', return_value='c' * 40):
+            with self.assertRaises(ValueError):
+                site.prepare(directory, SHA)
+            self.assertFalse((Path(directory) / 'rhwp-studio').exists())
 
 
 class StaticTests(unittest.TestCase):
