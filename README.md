@@ -1,8 +1,17 @@
-# rhwp 미리보기 시험 저장소
+# rhwp devel 미리보기
 
-[edwardkim/rhwp #7159](https://github.com/edwardkim/rhwp/issues/7159)의 격리 시험용이다. 실제 rhwp 운영 CI에는 연결하지 않는다.
+현재 개발 범위는 [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8)의 **독립 devel 미리보기**다. rhwp 저장소를 읽어 이 저장소의 runner에서 빌드하고 GitHub Pages로 제공한다. upstream CI/Secret 변경은 필요 없다.
 
-## 현재 범위
+- [설계 계획](docs/devel-preview/PLAN.md) · [운영 안내](docs/devel-preview/OPERATIONS.md)
+- 5분마다 변경 확인, SHA/빌드 레시피가 같으면 빌드 생략.
+- 실제 빌드는 직렬화하며 실패 시 이전 정상 사이트를 유지한다.
+- 예상 공개 주소: https://postmelee.github.io/rhwp-preview-lab/ (운영 활성화 전)
+
+## 이전 Cloudflare 실험 기록
+
+[edwardkim/rhwp #7159](https://github.com/edwardkim/rhwp/issues/7159)의 rhwp CI 통합 제안은 not planned로 종료했다. 아래 내용은 이전 실험 설명이며 신규 devel 서비스의 운영 검증 완료를 의미하지 않는다. 기존 배포와 기록은 보존한다.
+
+## 이전 실험 범위
 
 - `Lab CI`: 정확한 PR head checkout → 합성 앱 검증 → 작은 WASM 정적 앱 artifact.
 - `Lab Quality`: 별도 필수 검증. 하나라도 실패하거나 대기하면 게시하지 않는다.
