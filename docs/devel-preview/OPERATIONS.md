@@ -6,6 +6,10 @@ Issue: [#8](https://github.com/postmelee/rhwp-preview-lab/issues/8). 현재 상�
 
 공개 URL은 https://postmelee.github.io/rhwp-preview-lab/ 이다. 배너의 소스 SHA와 빌드 시각이 실제 실행 버전을 나타낸다. 최신 여부는 페이지를 열었을 때 공개 GitHub API로 조회한다. API 한도/네트워크 오류면 `최신 여부 확인 불가`를 표시한다. 갱신 상태 링크는 Actions의 실행·실패 로그를 연다. 최신 devel이라는 표시는 upstream의 전체 CI 또는 모든 기능이 통과했다는 뜻이 아니다.
 
+배너 시간은 `build.json`의 UTC `built_at`을 KST로 변환한 빌드 시각이다(배포 완료 시각이 아님). `Built … ago`는 30초마다/탭 복귀 시 로컬에서 갱신되며, 문서를 새로고침하거나 추가 API 호출을 하지 않는다. PC 시계가 빌드 시각보다 이르면 `Built just now`로 표시한다.
+
+PR 링크는 실행 중인 source SHA에 실제 반영된 devel 병합 PR이다. 직접 커밋이면 최대 20개 first-parent 후보에서 찾고 `+N commits`를 덧붙인다. API 제한/오류 또는 확정할 수 없는 이력은 `PR 미확인`이다. 이 부가 정보 실패는 배포를 중단하지 않으며, SHA가 실제 버전의 기준이다. [구현·검증 기록](FOOTER.md).
+
 수동 갱신: Actions → Devel Pages → Run workflow → main. `force=false`는 즉시 변경을 조회하며 동일 버전과 실패 재시도 간격을 존중한다. `force=true`는 현재 upstream devel을 다시 빌드한다. 진행 중 빌드가 있으면 기다린다. GitHub의 단일 대기 슬롯은 후속 예약 실행에 의해 교체될 수 있으므로, 수동 실행이 cancelled가 되었다면 진행 중 빌드 종료 후 다시 요청한다.
 
 ## 비용·사용량
@@ -47,6 +51,7 @@ gh workflow disable devel-pages.yml -R postmelee/rhwp-preview-lab
 
 ```sh
 python3 -m unittest discover -s devel/tests -v
+node --test devel/tests/status.test.mjs
 actionlint -ignore 'unexpected key "cache-mode" for "workflow" section' .github/workflows/devel-pages.yml
 node --check devel/smoke.mjs
 ```
