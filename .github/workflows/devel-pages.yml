@@ -91,6 +91,8 @@ jobs:
         with:
           node-version: '24.15.0'
           package-manager-cache: false
+      - name: Test preview status script
+        run: node --test harness/devel/tests/status.test.mjs
       - name: Install pinned release tools
         run: |
           rustup toolchain install 1.93.1 --profile minimal --target wasm32-unknown-unknown

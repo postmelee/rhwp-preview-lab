@@ -1,12 +1,14 @@
 """Disposable checkout adapter and bounded static artifact validation for Pages."""
 import datetime as dt
 import json
+from html import escape
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 from control import recipe, valid_sha
+from footer import find_last_pr, kst_time
 
 BASE = '/rhwp-preview-lab/'
 EXTENSIONS = {'.html', '.json', '.js', '.css', '.wasm', '.woff', '.woff2', '.ttf', '.otf',
@@ -47,6 +49,14 @@ def stamp(source, sha):
     metadata = {'sha': valid_sha(sha), 'recipe': recipe(), 'profile': 'release', 'pwa': False,
                 'run_id': os.environ['GITHUB_RUN_ID'], 'attempt': os.environ['GITHUB_RUN_ATTEMPT'],
                 'built_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'base': BASE}
+    metadata['last_pr'] = find_last_pr(sha)
+    pr = metadata['last_pr']
+    pr_label = '<span id="preview-pr">PR 미확인</span>'
+    if pr:
+        suffix = f" (+{pr['commits_after']} {'commit' if pr['commits_after'] == 1 else 'commits'})" if pr['commits_after'] else ''
+        pr_label = (f'<a id="preview-pr" style="color:#bde0ff" href="{escape(pr["url"], quote=True)}" '
+                    f'title="{escape(pr["title"], quote=True)}" target="_blank" rel="noopener">'
+                    f'PR #{pr["number"]}{suffix}</a>')
     (dist / 'build.json').write_text(json.dumps(metadata))
     (dist / 'preview-status.js').write_bytes(Path(__file__).with_name('status.js').read_bytes())
     index = dist / 'index.html'
@@ -57,7 +67,9 @@ def stamp(source, sha):
 #studio-root {{height:calc(100vh - 24px)!important}}
 #devel-preview-status {{box-sizing:border-box;height:24px;width:100%;overflow-x:auto;white-space:nowrap}}
 </style><aside id="devel-preview-status" data-source-sha="{sha}" aria-label="Preview build" style="position:fixed;bottom:0;right:0;z-index:2147483647;background:#132235;color:white;font:11px monospace;padding:5px">
-<a style="color:#bde0ff" href="https://github.com/edwardkim/rhwp/commit/{sha}" target="_blank" rel="noopener">devel {sha[:12]}</a> · {metadata['built_at']}
+<a style="color:#bde0ff" href="https://github.com/edwardkim/rhwp/commit/{sha}" target="_blank" rel="noopener">devel {sha[:12]}</a> · {pr_label}
+· <time id="preview-built-at" datetime="{metadata['built_at']}">{kst_time(metadata['built_at'])}</time>
+· <span id="preview-relative-time">빌드 경과 시간 확인 중</span>
 · <span id="preview-freshness">최신 여부 확인 중</span>
 · <a style="color:#bde0ff" href="https://github.com/postmelee/rhwp-preview-lab/actions/workflows/devel-pages.yml" target="_blank" rel="noopener">갱신 상태·실패 로그</a></aside>
 <script type="module" src="{BASE}preview-status.js"></script>'''

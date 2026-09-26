@@ -83,6 +83,27 @@ try {
   evidence.roundtrip = {firstBytes: first.bytes, secondBytes: second.bytes, text: marker,
     verification: 'UI save -> HWPX XML text -> file input open -> UI save -> HWPX XML text'};
   evidence.metadata = JSON.parse(await readFile(resolve(dist, 'build.json'), 'utf8'));
+  await page.waitForFunction(() => document.getElementById('preview-relative-time')?.textContent.startsWith('Built '));
+  evidence.footer = await page.evaluate(() => ({
+    absolute: document.getElementById('preview-built-at').textContent,
+    builtAt: document.getElementById('preview-built-at').dateTime,
+    relative: document.getElementById('preview-relative-time').textContent,
+    pr: document.getElementById('preview-pr').textContent,
+    prHref: document.getElementById('preview-pr').getAttribute('href'),
+    prTitle: document.getElementById('preview-pr').getAttribute('title'),
+    source: document.getElementById('devel-preview-status').dataset.sourceSha,
+  }));
+  const expectedKst = new Date(Date.parse(evidence.metadata.built_at) + 9 * 3600000).toISOString().slice(0, 19).replace('T', ' ') + ' KST';
+  assert.equal(evidence.footer.absolute, expectedKst);
+  assert.equal(evidence.footer.builtAt, evidence.metadata.built_at);
+  assert.equal(evidence.footer.source, evidence.metadata.sha);
+  if (evidence.metadata.last_pr) {
+    assert.equal(evidence.footer.prHref, evidence.metadata.last_pr.url);
+    assert.equal(evidence.footer.prTitle, evidence.metadata.last_pr.title);
+    assert(evidence.footer.pr.startsWith(`PR #${evidence.metadata.last_pr.number}`));
+  } else {
+    assert.equal(evidence.footer.pr, 'PR 미확인');
+  }
   const layout = await page.evaluate(() => ({
     appBottom: document.getElementById('studio-root').getBoundingClientRect().bottom,
     bannerTop: document.getElementById('devel-preview-status').getBoundingClientRect().top,
