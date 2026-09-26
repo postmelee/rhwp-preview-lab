@@ -22,7 +22,7 @@ function startBuildClock() {
   });
 }
 
-// Public read-only freshness check; separate from the local clock and no token.
+// Check once per page load; the local build clock never refreshes this result.
 async function checkFreshness() {
   const label = document.getElementById('preview-freshness');
   try {
@@ -31,9 +31,15 @@ async function checkFreshness() {
     const current = (await upstream.json()).object;
     const displayedSHA = document.getElementById('devel-preview-status').dataset.sourceSha;
     if (!/^[a-f0-9]{40}$/.test(current.sha)) throw new Error('Invalid SHA');
-    label.textContent = displayedSHA === current.sha ? '조회 시점 최신 devel' : `현재 화면에 새 devel이 아직 반영되지 않음 (최신 ${current.sha.slice(0, 12)})`;
+    const checkedAt = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    }).format(Date.now());
+    label.textContent = displayedSHA === current.sha ? '최신 devel 반영됨' : '최신 devel 미반영';
+    label.title = `확인 시각: ${checkedAt} KST\n최신 devel SHA: ${current.sha}`;
   } catch {
-    label.textContent = '최신 여부 확인 불가';
+    label.textContent = '최신 devel 확인 불가';
+    label.title = '최신 devel 정보를 가져오지 못했습니다. 새로고침하여 다시 확인하세요.';
   }
 }
 
