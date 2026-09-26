@@ -177,7 +177,7 @@ class StaticTests(unittest.TestCase):
         self.dist.mkdir(parents=True)
         (self.dist / 'index.html').write_text('<html><body></body></html>')
         (self.dist / 'test.wasm').write_bytes(b'\0asm\x01\0\0\0')
-        with patch.dict(os.environ, {'GITHUB_RUN_ID': '1', 'GITHUB_RUN_ATTEMPT': '2'}):
+        with patch.dict(os.environ, {'GITHUB_RUN_ID': '1', 'GITHUB_RUN_ATTEMPT': '2'}), patch.object(site, 'find_last_pr', return_value=None):
             site.stamp(self.root, SHA)
 
     def validate(self, sha=SHA):
