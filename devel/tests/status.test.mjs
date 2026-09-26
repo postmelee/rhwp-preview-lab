@@ -62,13 +62,15 @@ test('tab return catches up from fixed build time without replacing loaded SHA',
   assert.equal(s.nodes['preview-relative-time'].textContent, 'Built 6 hours ago');
   assert.equal(s.nodes['devel-preview-status'].dataset.sourceSha, sha);
   assert.equal(s.nodes['preview-built-at'].dateTime, builtAt);
-  assert.equal(s.nodes['preview-freshness'].textContent, '현재 화면에 새 devel이 아직 반영되지 않음 (최신 bbbbbbbbbbbb)');
+  assert.equal(s.nodes['preview-freshness'].textContent, '최신 devel 미반영');
+  assert.equal(s.nodes['preview-freshness'].title, `확인 시각: 2026-09-23 15:50:39 KST\n최신 devel SHA: ${'b'.repeat(40)}`);
   assert.equal(s.requests(), 1);
 });
 
 test('freshness API failure does not interrupt local elapsed time', async () => {
   const s = await setup({fail: true});
-  assert.equal(s.nodes['preview-freshness'].textContent, '최신 여부 확인 불가');
+  assert.equal(s.nodes['preview-freshness'].textContent, '최신 devel 확인 불가');
+  assert.equal(s.nodes['preview-freshness'].title, '최신 devel 정보를 가져오지 못했습니다. 새로고침하여 다시 확인하세요.');
   s.setAge(60000);
   s.timers[0].fn();
   assert.equal(s.nodes['preview-relative-time'].textContent, 'Built 1 minute ago');
@@ -85,10 +87,15 @@ test('refreshing the page preserves age and freshness compares displayed SHA', a
   const b = await setup({age: 3660000});
   assert.equal(a.nodes['preview-relative-time'].textContent, 'Built 1 hour ago');
   assert.equal(b.nodes['preview-relative-time'].textContent, 'Built 1 hour ago');
-  assert.equal(b.nodes['preview-freshness'].textContent, '조회 시점 최신 devel');
+  assert.equal(b.nodes['preview-freshness'].textContent, '최신 devel 반영됨');
+  assert.equal(a.nodes['preview-freshness'].title, `확인 시각: 2026-09-23 16:50:39 KST\n최신 devel SHA: ${sha}`);
+  assert.equal(b.nodes['preview-freshness'].title, `확인 시각: 2026-09-23 16:51:39 KST\n최신 devel SHA: ${sha}`);
+  assert.equal(a.requests(), 1);
+  assert.equal(b.requests(), 1);
 });
 
 test('malformed upstream SHA is never called latest', async () => {
   const s = await setup({upstream: 'bad'});
-  assert.equal(s.nodes['preview-freshness'].textContent, '최신 여부 확인 불가');
+  assert.equal(s.nodes['preview-freshness'].textContent, '최신 devel 확인 불가');
+  assert(!s.nodes['preview-freshness'].title.includes('SHA:'));
 });

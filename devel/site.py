@@ -70,7 +70,7 @@ def stamp(source, sha):
 <a style="color:#bde0ff" href="https://github.com/edwardkim/rhwp/commit/{sha}" target="_blank" rel="noopener">devel {sha[:12]}</a> · {pr_label}
 · <time id="preview-built-at" datetime="{metadata['built_at']}">{kst_time(metadata['built_at'])}</time>
 · <span id="preview-relative-time">빌드 경과 시간 확인 중</span>
-· <span id="preview-freshness">최신 여부 확인 중</span>
+· <span id="preview-freshness">최신 devel 확인 중</span>
 · <a style="color:#bde0ff" href="https://github.com/postmelee/rhwp-preview-lab/actions/workflows/devel-pages.yml" target="_blank" rel="noopener">갱신 상태·실패 로그</a></aside>
 <script type="module" src="{BASE}preview-status.js"></script>'''
     index.write_text(html.replace('</body>', banner + '</body>'))
