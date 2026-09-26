@@ -53,7 +53,7 @@ def stamp(source, sha):
     pr = metadata['last_pr']
     pr_label = '<span id="preview-pr">PR 미확인</span>'
     if pr:
-        suffix = f" (+{pr['commits_after']} commits)" if pr['commits_after'] else ''
+        suffix = f" (+{pr['commits_after']} {'commit' if pr['commits_after'] == 1 else 'commits'})" if pr['commits_after'] else ''
         pr_label = (f'<a id="preview-pr" style="color:#bde0ff" href="{escape(pr["url"], quote=True)}" '
                     f'title="{escape(pr["title"], quote=True)}" target="_blank" rel="noopener">'
                     f'PR #{pr["number"]}{suffix}</a>')

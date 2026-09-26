@@ -1,6 +1,7 @@
 """Optional build metadata. Public API failures must not block publication."""
 import datetime as dt
 import json
+from http.client import HTTPException
 import time
 import urllib.request
 from zoneinfo import ZoneInfo
@@ -58,6 +59,6 @@ def find_last_pr(source_sha):
             if not parents:
                 break
             sha = valid_sha(parents[0]['sha'])
-    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+    except (OSError, HTTPException, ValueError, KeyError, TypeError, AttributeError):
         print('PR metadata unavailable; publishing SHA and build time without a PR label.')
     return None

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+from http.client import IncompleteRead
 import os
 from pathlib import Path
 import sys
@@ -61,7 +62,7 @@ class FooterTests(unittest.TestCase):
         for response in [None, {}, [None], [{'base': None}]]:
             with patch.object(footer, 'public_json', return_value=response):
                 self.assertIsNone(footer.find_last_pr(SHA))
-        for error in [TimeoutError(), OSError(), ValueError()]:
+        for error in [TimeoutError(), OSError(), ValueError(), IncompleteRead(b"partial")]:
             with patch.object(footer, 'public_json', side_effect=error):
                 self.assertIsNone(footer.find_last_pr(SHA))
 
