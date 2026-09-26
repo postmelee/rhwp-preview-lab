@@ -62,7 +62,7 @@ test('tab return catches up from fixed build time without replacing loaded SHA',
   assert.equal(s.nodes['preview-relative-time'].textContent, 'Built 6 hours ago');
   assert.equal(s.nodes['devel-preview-status'].dataset.sourceSha, sha);
   assert.equal(s.nodes['preview-built-at'].dateTime, builtAt);
-  assert.equal(s.nodes['preview-freshness'].textContent, '갱신 대기 (최신 bbbbbbbbbbbb)');
+  assert.equal(s.nodes['preview-freshness'].textContent, '현재 화면에 새 devel이 아직 반영되지 않음 (최신 bbbbbbbbbbbb)');
   assert.equal(s.requests(), 1);
 });
 
