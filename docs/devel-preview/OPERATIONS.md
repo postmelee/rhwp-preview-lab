@@ -23,6 +23,13 @@ PR 링크는 실행 중인 source SHA에 실제 반영된 devel 병합 PR이다.
 
 ## 상태와 복구
 
+폰트 라이선스 PDF는 `fonts/licenses/Cafe24Ssurround-LICENSE.pdf`,
+`fonts/licenses/Cafe24Supermagic-LICENSE.pdf`, `fonts/licenses/HappinessSans-LICENSE.pdf`
+세 경로만 허용한다([#16](https://github.com/postmelee/rhwp-preview-lab/issues/16)). 원문은 그대로
+배포하며 `%PDF-` 헤더를 확인한다. 이 검사는 PDF 형식의 식별자 확인이며 내용의 안전성까지
+보증하지 않는다. 다른 경로의 PDF는 거부하며 기존 심볼릭 링크·개별 50MiB·전체 100MiB 제한은
+동일하게 적용한다. upstream에 새 라이선스 PDF가 추가되면 출처를 확인하고 허용 목록과 검사를 갱신한다.
+
 조회부터 배포 종료까지 workflow-level concurrency로 직렬화한다. 대기 실행은 합쳐지고 잠금 취득 후 최신 SHA를 고른다. 오래된 workflow revision의 rerun은 gate/publish guard에서 차단한다. 빌드 중 새로운 upstream 커밋이 들어와도 이미 시작한 빌드를 계속하며 다음 조회에서 최신 커밋을 처리한다.
 
 `devel-preview-build` deployment environment의 payload가 재시도 상태다. 이 저장소의 harness ref, upstream SHA, recipe, run/attempt를 기록한다. 마지막 성공 배포 여부는 공개 `build.json`과 함께 확인한다. GitHub API 오류는 무조건 재빌드를 시작하지 않고 조회 실패로 종료한다. 비정상 종료로 finish가 실행되지 않아도 1시간 후 미완료 기록을 재시도할 수 있다.

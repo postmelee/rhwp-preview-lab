@@ -13,6 +13,12 @@ from footer import find_last_pr, kst_time
 BASE = '/rhwp-preview-lab/'
 EXTENSIONS = {'.html', '.json', '.js', '.css', '.wasm', '.woff', '.woff2', '.ttf', '.otf',
               '.png', '.svg', '.jpg', '.jpeg', '.ico', '.txt', '.md', '.ts', '.webp'}
+# Keep upstream font license originals without permitting PDFs elsewhere.
+LICENSE_PDFS = frozenset({
+    'fonts/licenses/Cafe24Ssurround-LICENSE.pdf',
+    'fonts/licenses/Cafe24Supermagic-LICENSE.pdf',
+    'fonts/licenses/HappinessSans-LICENSE.pdf',
+})
 
 
 def prepare(source, sha):
@@ -86,7 +92,8 @@ def validate(dist, sha, key, run_id, attempt):
             raise ValueError('symlink in artifact')
         if path.is_dir():
             continue
-        if not path.is_file() or path.suffix not in EXTENSIONS:
+        license_pdf = rel.as_posix() in LICENSE_PDFS
+        if not path.is_file() or (path.suffix not in EXTENSIONS and not license_pdf):
             raise ValueError(f'non-static asset: {rel}')
         if any(part in ('samples', 'node_modules', '.git') for part in rel.parts):
             raise ValueError('private or sample corpus in artifact')
@@ -96,6 +103,10 @@ def validate(dist, sha, key, run_id, attempt):
         total += size
         if size > 50 * 1024 * 1024 or total > 100 * 1024 * 1024:
             raise ValueError('artifact size limit')
+        if license_pdf:
+            with path.open('rb') as source:
+                if source.read(5) != b'%PDF-':
+                    raise ValueError(f'invalid license PDF header: {rel}')
         files.append(rel.as_posix())
     if len(files) > 20000 or not {'index.html', 'build.json', 'preview-status.js'} <= set(files):
         raise ValueError('missing entry/provenance or too many files')
