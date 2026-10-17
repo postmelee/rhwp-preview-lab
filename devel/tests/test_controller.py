@@ -218,6 +218,63 @@ class StaticTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.validate()
 
+    def license_pdf(self, name='fonts/licenses/Cafe24Ssurround-LICENSE.pdf', data=b'%PDF-1.7\nfixture\n%%EOF\n'):
+        path = self.dist / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        return path
+
+    def test_three_font_license_pdfs_are_preserved_and_counted(self):
+        baseline = self.validate()
+        paths = [self.license_pdf('fonts/licenses/' + name) for name in (
+            'Cafe24Ssurround-LICENSE.pdf', 'Cafe24Supermagic-LICENSE.pdf', 'HappinessSans-LICENSE.pdf')]
+        originals = [p.read_bytes() for p in paths]
+        result = self.validate()
+        self.assertEqual(result['files'], baseline['files'] + 3)
+        self.assertEqual(result['bytes'], baseline['bytes'] + sum(map(len, originals)))
+        self.assertEqual([p.read_bytes() for p in paths], originals)
+
+    def test_other_pdf_paths_remain_rejected(self):
+        for name in ('Cafe24Ssurround-LICENSE.pdf', 'fonts/Cafe24Ssurround-LICENSE.pdf',
+                     'fonts/licenses/other.pdf', 'fonts/licenses/nested/Cafe24Ssurround-LICENSE.pdf',
+                     'fonts/licenses/Cafe24Ssurround-LICENSE.PDF'):
+            with self.subTest(name=name):
+                path = self.license_pdf(name)
+                with self.assertRaisesRegex(ValueError, 'non-static asset'):
+                    self.validate()
+                path.unlink()
+
+    def test_named_license_requires_pdf_header(self):
+        for data in (b'', b'%PDF', b'<html>not PDF</html>', b'prefix%PDF-1.7'):
+            with self.subTest(data=data):
+                self.license_pdf(data=data)
+                with self.assertRaisesRegex(ValueError, 'invalid license PDF header'):
+                    self.validate()
+
+    def test_named_license_symlink_remains_rejected(self):
+        target = self.root / 'outside.pdf'
+        target.write_bytes(b'%PDF-1.7')
+        path = self.license_pdf()
+        path.unlink()
+        path.symlink_to(target)
+        with self.assertRaisesRegex(ValueError, 'symlink in artifact'):
+            self.validate()
+
+    def test_named_license_obeys_individual_size_limit(self):
+        path = self.license_pdf()
+        with path.open('r+b') as target:
+            target.truncate(50 * 1024 * 1024 + 1)
+        with self.assertRaisesRegex(ValueError, 'artifact size limit'):
+            self.validate()
+
+    def test_named_licenses_obey_total_size_limit(self):
+        for name in ('Cafe24Ssurround-LICENSE.pdf', 'Cafe24Supermagic-LICENSE.pdf', 'HappinessSans-LICENSE.pdf'):
+            path = self.license_pdf('fonts/licenses/' + name)
+            with path.open('r+b') as target:
+                target.truncate(34 * 1024 * 1024)
+        with self.assertRaisesRegex(ValueError, 'artifact size limit'):
+            self.validate()
+
 
 if __name__ == '__main__':
     unittest.main()
