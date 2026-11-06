@@ -6,8 +6,10 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
+import uuid
 
 REPO = 'postmelee/rhwp-preview-lab'
 UPSTREAM = 'edwardkim/rhwp'
@@ -166,6 +168,51 @@ def finish():
     cleanup_pages_artifact()
 
 
+def public_file(path):
+    # Each observation is independent of a previous failed verification request.
+    # Never send the GitHub token to Pages.
+    url = SITE + path + '?verify=' + uuid.uuid4().hex
+    headers = {'User-Agent': 'rhwp-devel-preview', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=10) as response:
+        data = response.read(2 * 1024 * 1024 + 1)
+        if len(data) > 2 * 1024 * 1024:
+            raise ValueError('public response exceeds controller limit')
+        return data
+
+
+def verify_once():
+    expected = dict(zip(('sha', 'recipe', 'run_id', 'attempt'),
+                        (os.environ['SOURCE_SHA'], os.environ['RECIPE'],
+                         os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT'])))
+    metadata = json.loads(public_file('build.json'))
+    if not isinstance(metadata, dict):
+        raise ValueError('public metadata is not an object')
+    actual = {key: str(metadata.get(key)) for key in expected}
+    if actual != expected:
+        raise ValueError(f'Published metadata mismatch: expected={json.dumps(expected)} observed={json.dumps(actual)}')
+    expected_hash = metadata.get('index_sha256')
+    if not isinstance(expected_hash, str) or not re.fullmatch('[0-9a-f]{64}', expected_hash):
+        raise ValueError('public metadata is missing a valid index_sha256')
+    actual_hash = hashlib.sha256(public_file('index.html')).hexdigest()
+    if actual_hash != expected_hash:
+        raise ValueError(f'Published HTML mismatch: expected={expected_hash} observed={actual_hash}')
+    return metadata
+
+
+def verify(attempts=12, interval=10):
+    for number in range(1, attempts + 1):
+        try:
+            metadata = verify_once()
+        except (ValueError, OSError, urllib.error.URLError) as error:
+            print(f'Public verification {number}/{attempts}: {error}', flush=True)
+            if number < attempts:
+                time.sleep(interval)
+        else:
+            summary(f'Published metadata and HTML verified: {SITE} — `{metadata["sha"]}`')
+            return
+    raise SystemExit('Public files did not match this run within the propagation window')
+
+
 if __name__ == '__main__':
     command = sys.argv[1]
     if command == 'gate':
@@ -178,10 +225,6 @@ if __name__ == '__main__':
     elif command == 'finish':
         finish()
     elif command == 'verify':
-        metadata = request(SITE + 'build.json?run=' + os.environ['GITHUB_RUN_ID'])
-        if (metadata['sha'], metadata['recipe'], str(metadata['run_id']), str(metadata['attempt'])) != (
-            os.environ['SOURCE_SHA'], os.environ['RECIPE'], os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']):
-            raise SystemExit('Published metadata does not match this run')
-        summary(f'Published and verified: {SITE} — `{metadata["sha"]}`')
+        verify()
     else:
         raise SystemExit('unknown controller command')
