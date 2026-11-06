@@ -191,6 +191,12 @@ class StaticTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.validate('c' * 40)
 
+    def test_changed_html_after_stamping_is_rejected(self):
+        with (self.dist / 'index.html').open('a') as index:
+            index.write('changed after stamp')
+        with self.assertRaisesRegex(ValueError, 'artifact HTML hash mismatch'):
+            self.validate()
+
     def test_symlink_rejected(self):
         (self.dist / 'linked.js').symlink_to('/etc/passwd')
         with self.assertRaises(ValueError):

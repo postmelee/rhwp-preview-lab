@@ -34,7 +34,11 @@ PR 링크는 실행 중인 source SHA에 실제 반영된 devel 병합 PR이다.
 
 `devel-preview-build` deployment environment의 payload가 재시도 상태다. 이 저장소의 harness ref, upstream SHA, recipe, run/attempt를 기록한다. 마지막 성공 배포 여부는 공개 `build.json`과 함께 확인한다. GitHub API 오류는 무조건 재빌드를 시작하지 않고 조회 실패로 종료한다. 비정상 종료로 finish가 실행되지 않아도 1시간 후 미완료 기록을 재시도할 수 있다.
 
-빌드나 브라우저 검증 실패는 publish를 실행하지 않으므로 기존 사이트를 보존한다. Pages 게시 후 공개 metadata 검증 실패는 로그에서 실제 게시 상태를 확인한다. 이미 게시된 사이트를 자동 롤백하지는 않는다. 성공은 공개 metadata의 SHA/recipe/run/attempt까지 일치했을 때 기록한다.
+빌드나 브라우저 검증 실패는 publish를 실행하지 않으므로 기존 사이트를 보존한다. Pages API의 성공 응답만으로 게시 완료를 판단하지 않는다. 공개 `build.json`의 SHA/recipe/run/attempt와 `index_sha256`에 대응하는 실제 `index.html`의 SHA-256이 모두 일치해야 성공으로 기록한다. 조회마다 고유 쿼리와 `Cache-Control: no-cache`를 사용하며, 불일치 로그에 기대값과 관측값을 남긴다. 이 헤더가 모든 CDN 계층의 캐시 우회를 보장하는 것은 아니다.
+
+최대 12회(조회 사이 10초) 확인해도 파일이 맞지 않으면 현재 harness인지 다시 확인하고 **같은 run의 검증된 Pages artifact를 한 번만 재게시**한다. 빌드와 브라우저 검증을 반복하거나 게시 권한을 확대하지 않는다. 재게시 후 동일한 공개 검증을 통과해야 publish가 성공한다. 재확인·재게시·최종 검증 실패는 전체 실패로 유지한다. publish job은 최대 20분, 각 Pages 배포 요청은 최대 3분이며 무한 재시도하지 않는다. 이미 게시된 사이트를 자동 롤백하지는 않는다.
+
+이 복구는 [#18](https://github.com/postmelee/rhwp-preview-lab/issues/18)의 Pages 성공 응답/공개 파일 불일치를 다룬다. 당시 빌드와 브라우저 검증은 최신 SHA로 통과했으나 공개 파일은 이전 run을 제공했다. GitHub 내부 원인은 확정되지 않았으며, 동일 harness SHA의 배포 ID 재사용을 원인으로 단정하지 않는다. 최종 실패 시 공개 파일과 로그를 확인하고 수동 실행으로 재시도한다.
 
 일시 중단:
 

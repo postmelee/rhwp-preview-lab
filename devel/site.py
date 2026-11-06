@@ -1,5 +1,6 @@
 """Disposable checkout adapter and bounded static artifact validation for Pages."""
 import datetime as dt
+import hashlib
 import json
 from html import escape
 import os
@@ -63,7 +64,6 @@ def stamp(source, sha):
         pr_label = (f'<a id="preview-pr" style="color:#bde0ff" href="{escape(pr["url"], quote=True)}" '
                     f'title="{escape(pr["title"], quote=True)}" target="_blank" rel="noopener">'
                     f'PR #{pr["number"]}{suffix}</a>')
-    (dist / 'build.json').write_text(json.dumps(metadata))
     (dist / 'preview-status.js').write_bytes(Path(__file__).with_name('status.js').read_bytes())
     index = dist / 'index.html'
     html = index.read_text()
@@ -80,6 +80,8 @@ def stamp(source, sha):
 · <a style="color:#bde0ff" href="https://github.com/postmelee/rhwp-preview-lab/actions/workflows/devel-pages.yml" target="_blank" rel="noopener">갱신 상태·실패 로그</a></aside>
 <script type="module" src="{BASE}preview-status.js"></script>'''
     index.write_text(html.replace('</body>', banner + '</body>'))
+    metadata['index_sha256'] = hashlib.sha256(index.read_bytes()).hexdigest()
+    (dist / 'build.json').write_text(json.dumps(metadata))
 
 
 def validate(dist, sha, key, run_id, attempt):
@@ -115,6 +117,8 @@ def validate(dist, sha, key, run_id, attempt):
         raise ValueError('artifact provenance mismatch')
     if metadata.get('base') != BASE or metadata.get('profile') != 'release' or metadata.get('pwa') is not False:
         raise ValueError('incorrect build mode')
+    if metadata.get('index_sha256') != hashlib.sha256((dist / 'index.html').read_bytes()).hexdigest():
+        raise ValueError('artifact HTML hash mismatch')
     wasm = [p for p in files if p.endswith('.wasm')]
     if not wasm:
         raise ValueError('missing WASM')
