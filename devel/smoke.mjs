@@ -1,6 +1,6 @@
 // Exercise the built release app at the actual project subpath, never Vite dev mode.
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
+import {assertHwpxText, confirmSaveAs, waitForDocumentReady} from './smoke-ui.mjs';
 import {createServer} from 'node:http';
 import {createRequire} from 'node:module';
 import {readFile, mkdir, writeFile, stat} from 'node:fs/promises';
@@ -42,46 +42,57 @@ try {
   await page.evaluateOnNewDocument(() => {
     localStorage.setItem('rhwp-settings', JSON.stringify({version: 1, theme: {mode: 'system', skin: 'default', skinChosen: true}}));
   });
-  await page.goto(origin + base + '?renderer=canvaskit', {waitUntil: 'networkidle0', timeout: 90000});
-  await page.waitForFunction(() => window.rhwpStudio?.automation?.getContext().hasDocument, {timeout: 60000});
+  await page.goto(origin + base + '?renderer=canvaskit&lang=ko', {waitUntil: 'networkidle0', timeout: 90000});
+  evidence.initialDocument = await waitForDocumentReady(page, '새 문서.hwp');
   const canvas = await page.waitForSelector('#scroll-container canvas', {timeout: 15000});
   const bounds = await canvas.boundingBox();
   await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + 100);
   const marker = 'devel Pages HWPX roundtrip';
   await page.keyboard.type(marker, {delay: 25});
   await page.waitForFunction(() => window.rhwpStudio.automation.getContext().canUndo);
-  async function saveAsHwpx(filename) {
+  async function saveAsHwpx(filename, markers) {
     // The real save command writes to a test file-picker sink; no dev globals.
     await page.evaluate(name => {
       window.__previewSaved = null;
+      window.__previewSaveClosed = false;
       window.showSaveFilePicker = async () => ({name, createWritable: async () => ({
         write: async blob => {window.__previewSaved = Array.from(new Uint8Array(await blob.arrayBuffer()));},
-        close: async () => {},
+        close: async () => {window.__previewSaveClosed = true;},
       })});
       const result = window.rhwpStudio.automation.execute('file:save-as-hwpx', undefined, {allowDialog: true});
       if (!result.ok) throw new Error(JSON.stringify(result));
     }, filename);
-    await page.waitForSelector('.dialog-body input[type="text"]', {timeout: 10000});
-    await page.click('.dialog-footer .dialog-btn-primary');
-    await page.waitForFunction(() => window.__previewSaved?.length > 0, {timeout: 30000});
+    await confirmSaveAs(page, filename);
+    await page.waitForFunction(name => window.__previewSaved?.length > 0 && window.__previewSaveClosed
+      && !window.rhwpStudio.automation.getContext().isDirty
+      && document.title.includes(name) && !document.querySelector('.modal-overlay')
+      && !document.documentElement.classList.contains('rhwp-busy'), {timeout: 30000}, filename);
     const bytes = await page.evaluate(() => window.__previewSaved);
     assert.equal(bytes[0], 0x50); assert.equal(bytes[1], 0x4b);
     const path = resolve('smoke-evidence', filename);
     await writeFile(path, Buffer.from(bytes));
-    execFileSync('python3', ['-c',
-      'import sys,zipfile,xml.etree.ElementTree as E; z=zipfile.ZipFile(sys.argv[1]); text="".join("".join(E.fromstring(z.read(n)).itertext()) for n in z.namelist() if n.startswith("Contents/section") and n.endswith(".xml")); assert sys.argv[2] in text,repr(text)',
-      path, marker]);
+    assertHwpxText(path, markers);
     return {path, bytes: bytes.length};
   }
-  const first = await saveAsHwpx('roundtrip-original.hwpx');
-  // Use a different file name so the title proves the normal file-open path completed.
+  const first = await saveAsHwpx('roundtrip-original.hwpx', [marker]);
+  // A new name distinguishes this open from the previous document. Title alone is not readiness.
   const reopenedPath = resolve('smoke-evidence/roundtrip-reopened.hwpx');
   await writeFile(reopenedPath, await readFile(first.path));
   await (await page.$('#file-input')).uploadFile(reopenedPath);
-  await page.waitForFunction(() => document.title.includes('roundtrip-reopened.hwpx'), {timeout: 30000});
-  const second = await saveAsHwpx('roundtrip-second.hwpx');
-  evidence.roundtrip = {firstBytes: first.bytes, secondBytes: second.bytes, text: marker,
-    verification: 'UI save -> HWPX XML text -> file input open -> UI save -> HWPX XML text'};
+  evidence.reopenedDocument = await waitForDocumentReady(page, 'roundtrip-reopened.hwpx');
+  const reopenedCanvas = await page.waitForSelector('#scroll-container canvas', {visible: true});
+  const reopenedBounds = await reopenedCanvas.boundingBox();
+  await page.mouse.click(reopenedBounds.x + reopenedBounds.width / 2, reopenedBounds.y + 100);
+  await page.keyboard.press('End');
+  const secondMarker = ' edited after reopen';
+  await page.keyboard.type(secondMarker, {delay: 25});
+  await page.waitForFunction(() => {
+    const context = window.rhwpStudio.automation.getContext();
+    return context.isDirty && context.canUndo;
+  });
+  const second = await saveAsHwpx('roundtrip-second.hwpx', [marker, secondMarker]);
+  evidence.roundtrip = {firstBytes: first.bytes, secondBytes: second.bytes, text: marker, secondText: secondMarker,
+    verification: 'UI save -> HWPX XML text -> file input open -> document ready -> edit -> UI save -> both HWPX XML markers'};
   evidence.metadata = JSON.parse(await readFile(resolve(dist, 'build.json'), 'utf8'));
   await page.waitForFunction(() => document.getElementById('preview-relative-time')?.textContent.startsWith('Built '));
   evidence.footer = await page.evaluate(() => ({
@@ -118,6 +129,7 @@ try {
   assert(evidence.requests.some(r => r.url.includes('canvaskit') && r.url.endsWith('.wasm') && r.status === 200));
   assert(evidence.requests.some(r => r.url.includes('/fonts/') && r.status === 200));
   assert.deepEqual(evidence.errors, [], 'unhandled browser exceptions');
+  assert.equal(await page.$('.modal-overlay'), null, 'no modal may remain at smoke completion');
   evidence.passed = true;
 } finally {
   if (page) {

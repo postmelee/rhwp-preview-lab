@@ -113,7 +113,9 @@ jobs:
           retention-days: 1
       - name: Browser smoke at the Pages subpath
         timeout-minutes: 4
-        run: node harness/devel/smoke.mjs source
+        run: |
+          RHWP_SOURCE=source node --test harness/devel/tests/smoke.test.mjs
+          node harness/devel/smoke.mjs source
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:

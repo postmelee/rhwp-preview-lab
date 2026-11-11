@@ -65,6 +65,16 @@ python3 -m unittest discover -s devel/tests -v
 node --test devel/tests/status.test.mjs
 actionlint -ignore 'unexpected key "cache-mode" for "workflow" section' .github/workflows/devel-pages.yml
 node --check devel/smoke.mjs
+node --check devel/smoke-ui.mjs
+# source/rhwp-studio 에 npm ci를 마친 후 (CHROME_PATH로 Chrome 경로 지정 가능):
+RHWP_SOURCE=source node --test devel/tests/smoke.test.mjs
+node devel/smoke.mjs source
 ```
 
 설치된 actionlint는 최신 GitHub `cache-mode` 문법을 아직 모르므로 그 진단만 제외한다. GitHub가 실제 workflow를 받아 실행하는지 PR CI에서 확인한다.
+
+브라우저 smoke는 파일 제목뿐 아니라 문서 초기화 완료·대기 커서 해제·깨끗한 편집 상태를 확인한다.
+로컬 글꼴 안내가 뜨면 `대체 글꼴로 보기`만 선택하며 로컬 글꼴 접근 권한은 요청하지 않는다.
+저장 대화상자 내부의 입력과 확인 버튼을 사용하고, 재열기 후 새 문자열을 입력하여 두 번째 HWPX에
+원문과 새 문자열이 모두 있는지 검사한다. 종료 시 모달이 남아 있으면 실패한다.
+수정 전후 증거와 검증 범위는 [브라우저 smoke 회귀 검증](SMOKE.md)을 참고한다.
